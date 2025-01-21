@@ -11,8 +11,8 @@ import subprocess
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Adjust as needed
-CONFIG_PATH = "/home/pi/workspace/gopro_timelapse/config.json"
-DOWNLOAD_DIR = "/home/pi/workspace/gopro_timelapse/photos"  # where to store the images
+CONFIG_PATH = "/home/timelapse/config.json"
+DOWNLOAD_DIR = "/home/timelapse/photos"  # where to store the images
 
 
 def load_config(path):

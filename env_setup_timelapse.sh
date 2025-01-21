@@ -60,17 +60,17 @@ StartLimitBurst=3
 [Service]
 Type=simple
 ExecStart=/bin/bash -c '
-    config_file="/home/mrbigheart/workspace/gopro_timelapse/config.json";
+    config_file="/home/timelapse/config.json";
     username=$(jq -r .rpi.username $config_file);
     script_path=$(jq -r .rpi.path $config_file);
     work_dir=$(jq -r .rpi.work_dir $config_file);
-    source /home/mrbigheart/workspace/gopro_env/bin/activate && python $script_path
+    source /home/gopro_env/bin/activate && python $script_path
 '
 Restart=on-failure
 RestartSec=60
 WatchdogSec=120
 User=pi
-WorkingDirectory=/home/mrbigheart/workspace/gopro_timelapse
+WorkingDirectory=/home/timelapse
 ExecStartPre=/bin/bash -c 'until ping -c1 8.8.8.8; do sleep 5; done'
 OnFailure=timelapse_failure.service
 
@@ -88,7 +88,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 ExecStart=/bin/bash -c '
-    config_file="/home/mrbigheart/workspace/gopro_timelapse/config.json";
+    config_file="/home/timelapse/config.json";
     api_key=$(jq -r .pushbullet.api_key $config_file);
     message="Time-lapse script cannot be started. Multiple failures. Assistance needed. Will shut-down now..";
 
@@ -122,8 +122,8 @@ echo "  sudo reboot"
 # OPTIONAL: Auto-open a terminal with 'less' on the latest log file after boot.
 # You can do this via .bashrc or systemd as well. Example:
 #
-# echo "sleep 10 && x-terminal-emulator -e 'less +F /home/mrbigheart/workspace/gopro_timelapse/logs/daily_logs_$(date +%Y_%m_%d).txt'" \
-#     >> /home/pi/.bashrc
+# echo "sleep 10 && x-terminal-emulator -e 'less +F /home/timelapse/logs/daily_logs_$(date +%Y_%m_%d).txt'" \
+#     >> /home/mrbigheart/.bashrc
 #
 # That means after you log in, it waits 10s, then opens a terminal reading the log file.
 ###############################################################################
