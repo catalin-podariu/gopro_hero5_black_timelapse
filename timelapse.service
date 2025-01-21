@@ -17,20 +17,15 @@ StartLimitBurst=3
 Type=simple
 
 # Load configuration and execute script
-ExecStart=/bin/bash -c '
-    config_file="/home/mrbigheart/workspace/gopro_timelapse/config.json";
-    username=$(jq -r .rpi.username $config_file);
-    script_path=$(jq -r .rpi.path $config_file);
-    work_dir=$(jq -r .rpi.work_dir $config_file);
-    source /home/mrbigheart/workspace/gopro_env/bin/activate && python $script_path
-'
+ExecStart=/bin/bash -c "config_file='/home/timelapse/config.json'; username=$(jq -r .rpi.username $config_file); script_path=$(jq -r .rpi.path $config_file); work_dir=$(jq -r .rpi.work_dir $config_file); sudo source /home/gopro_env/bin/activate && python $script_path"
+
 Restart=on-failure
 RestartSec=60
 WatchdogSec=120
 
 # Ensure the script runs as a specific user
-User=pi
-WorkingDirectory=/home/mrbigheart/workspace/gopro_timelapse
+User=mrbigheart
+WorkingDirectory=/home/timelapse
 
 # Ensure network is fully operational before starting
 ExecStartPre=/bin/bash -c 'until ping -c1 8.8.8.8; do sleep 5; done'

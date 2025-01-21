@@ -1,12 +1,15 @@
 # GoPro Timelapse Controller
 
-*Did you ever want to create an ultra-long GoPro timelapse without worrying about manually 
-managing the process? This project provides a Python-based solution to automate the entire 
-workflow on a Raspberry Pi. It seamlessly handles Wi-Fi switching between the Pi and the GoPro, 
-schedules periodic photo captures, keeps the system time in sync, and even sends alerts if 
-something goes wrong. This was designed for a six month timelapse, with two photos per hour.
+*Did you ever want to create an ultra-long GoPro timelapse without special equipment?*
+
+*This project provides a Python-based solution to automate the entire workflow on a Raspberry Pi. 
+It handles Wi-Fi switching between the Pi and the GoPro, schedules periodic photo captures, 
+keeps the system time in sync, and even sends alerts if something goes wrong. All configurable.
 Designed to run continuously as a `systemd` service, it ensures your timelapse runs 
 smoothly for extended periods with minimal intervention.*
+
+*This was designed for a six month timelapse, with two photos per hour. But feel free to adapt it.*
+
 
 ## Features
 
@@ -58,3 +61,6 @@ If the script fails 3 times in quick succession, `timelapse_failure.service` is 
 #
 
 Enjoy! :)
+
+_And if you're gonna' whine about the monkey-patch or ASCII.. save it!<br>
+I like it! =))_

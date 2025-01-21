@@ -18,7 +18,6 @@ class TimelapseController:
         with open(config_path, "r") as f:
             self.config = json.load(f)
 
-        # Basic config
         self.wifi_config = self.config["wifi"]
         self.gopro_config = self.config["gopro"]
         self.push_config = self.config["pushbullet"]
@@ -29,7 +28,7 @@ class TimelapseController:
 
         self.wdt = WatchdogTimer(timeout=self.watchdog_timer)
 
-        # States might be: WAITING, TAKE_PHOTO, SEND_UPDATE, ERROR, OFFLINE_ALERT
+        # Default is WAITING
         self.state = "WAITING"
 
         self.last_offline_alert_time = None
@@ -37,7 +36,6 @@ class TimelapseController:
         self.wifi_retry_counter = 0
         self.max_retries = 3
         self.reach_for_help_counter = 0
-        self.keep_alive_counter = 1 # Start at 1 to avoid immediate keep_alive
         self.photo_capture_error_counter = 0
         self.photo_number = 0
 
@@ -50,9 +48,9 @@ class TimelapseController:
         atexit.register(self.on_exit)
 
     # ------------------------------------------------------------------
-    # Main cycle: simpler approach
-    # ------------------------------------------------------------------
+
     def main_cycle(self):
+        logger.logo()
         """
         Runs forever, checking if it's time to take a photo (in WAITING),
         capturing photos (TAKE_PHOTO), sending updates (SEND_UPDATE),
@@ -60,7 +58,7 @@ class TimelapseController:
         """
         while True:
             try:
-                logger.info(f"[main_cycle] Current state = {self.state}")
+                logger.info(f"Starting main cycle. Current state = {self.state}")
                 if self.state == "WAITING":
                     self.handle_waiting_state()
                 elif self.state == "TAKE_PHOTO":
@@ -69,26 +67,22 @@ class TimelapseController:
                     self.handle_send_update_state()
                 elif self.state == "ERROR":
                     self.handle_error_state()
-
                 # EMERGENCY STATE: If GoPro is offline, we send alert
                 elif self.state == "OFFLINE_ALERT":
                     self.handle_offline_alert_state()
-
                 else:
                     logger.error(f"Unknown state: {self.state}. Forcing ERROR.")
                     self.state = "ERROR"
 
                 # Wait a few seconds before next loop
-                time.sleep(5)
-
+                time.sleep(10)
             except Exception as e:
                 logger.error(f"Unexpected error in main cycle: {e}")
                 self.state = "ERROR"
                 time.sleep(10)
 
     # ------------------------------------------------------------------
-    #  State Handlers
-    # ------------------------------------------------------------------
+
     def handle_waiting_state(self):
         now = datetime.datetime.now()
         hour = now.hour
@@ -229,9 +223,7 @@ class TimelapseController:
 
             logger.warning("Still offline. Will retry in main loop.")
 
-
     # ------------------------------------------------------------------
-
 
     def ensure_wifi_connected(self, ssid):
         current_wifi = self.get_current_wifi() or ""
@@ -294,13 +286,8 @@ class TimelapseController:
             return  # We’re probably in OFFLINE_ALERT or ERROR now
 
         logger.info("keep_alive sequence completed.")
-        logger.info(f"keep_alive counter {self.keep_alive_counter}")
-
 
     def take_photo(self):
-        """
-        Actually power up the GoPro, set photo mode, take a picture, power down, etc.
-        """
         try:
             logger.info("Waking up the GoPro with Magic package.")
             self.send_wol()
@@ -357,7 +344,6 @@ class TimelapseController:
             return -1
 
     def send_status(self):
-        # logger.error(f"[STATUS] {title}: {message}") TODO ADD THIS!
         url = "https://api.pushbullet.com/v2/pushes"
         headers = {
             "Access-Token": self.push_config["api_key"],
@@ -372,9 +358,9 @@ class TimelapseController:
         try:
             resp = requests.post(url, headers=headers, json=data)
             if resp.status_code == 200:
-                logger.info("Status push notification sent successfully.")
+                logger.error(f"Push notification sent successfully -- [STATUS] {timestamp} -- {data}")
             else:
-                logger.error(f"PushBullet error: {resp.status_code}, {resp.text}")
+                logger.error(f"This is PushBullet's error: {resp.status_code}, {resp.text}")
         except Exception as e:
             logger.error(f"Error sending status: {e}")
 
@@ -399,7 +385,6 @@ class TimelapseController:
                 logger.error(f"Pushbullet error: {resp.status_code} -> {resp.text}")
         except Exception as e:
             logger.error(f"Error sending pushbullet: {e}")
-
 
     def sync_time(self):
         try:
@@ -488,6 +473,7 @@ class TimelapseController:
         logger.info("Ctrl+C received. Exiting gracefully...")
         sys.exit(0)
 
+# ------------------------------------------------------------------
 
 if __name__ == "__main__":
     controller = TimelapseController("config.json")

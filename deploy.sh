@@ -12,7 +12,7 @@ fi
 FILE_PATTERN=$1
 
 echo "Deploying files matching pattern: $FILE_PATTERN to $REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR"
-scp $FILE_PATTERN "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR"
+scp "$FILE_PATTERN" "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR"
 
 if [ $? -eq 0 ]; then
     echo "Deployment successful!"
