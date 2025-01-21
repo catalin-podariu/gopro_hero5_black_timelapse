@@ -64,3 +64,5 @@ Enjoy! :)
 
 _And if you're gonna' whine about the monkey-patch or ASCII.. save it!<br>
 I like it! =))_
+
+P.S. This is my first ever script in python..
