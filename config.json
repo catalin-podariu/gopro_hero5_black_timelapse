@@ -1,0 +1,33 @@
+{
+  "wifi": {
+    "ssid": "ssid_here",
+    "pwd": "pwd_here"
+  },
+  "gopro": {
+    "mac": "mac_here",
+    "ip": "ip_here",
+    "ssid": "ssid_here",
+    "pwd": "pwd_here"
+  },
+  "rpi":{
+    "ip": "ip_here",
+    "port": 8080,
+    "path": "/home/timelapse/timelapse.py",
+    "username": "username_here",
+    "work_dir": "/home/timelapse"
+  },
+  "pushbullet": {
+    "api_key": "api_key_here"
+  },
+  "photo_timer": {
+    "minutes": [3, 33]
+  },
+  "watchdog_timer": {
+    "milliseconds": 120
+  },
+  "state": {
+    "path": "/home/timelapse/state.json"
+  },
+  "debug_level": "logging.DEBUG",
+  "logging_path": "/home/timelapse/logs"
+}

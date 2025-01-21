@@ -1,0 +1,9 @@
+{
+  "photo_number": 0,
+  "last_photo_minute": "2021-07-25T20:00:00",
+  "last_offline_alert_time": "2021-07-25T20:00:00",
+  "photo_capture_error_counter": 0,
+  "reach_for_help_counter": 0,
+  "error_retries": 0,
+  "max_error_retries": 5
+}

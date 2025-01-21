@@ -1,0 +1,42 @@
+# What This Service Does
+# Runs the timelapse script at startup after ensuring a working Wi-Fi internet connection.
+# Restarts the script if it crashes, with a retry delay of 60 seconds.
+# Reboots the system if the script fails to start after 2 minutes (2 consecutive failures).
+# Runs inside a Python virtual environment (gopro_env) to ensure dependencies are correctly managed.
+
+[Unit]
+Description=GoPro Timelapse Script
+After=network-online.target
+Wants=network-online.target
+
+# Failure handling
+StartLimitIntervalSec=180
+StartLimitBurst=3
+
+[Service]
+Type=simple
+
+# Load configuration and execute script
+ExecStart=/bin/bash -c '
+    config_file="/home/mrbigheart/workspace/gopro_timelapse/config.json";
+    username=$(jq -r .rpi.username $config_file);
+    script_path=$(jq -r .rpi.path $config_file);
+    work_dir=$(jq -r .rpi.work_dir $config_file);
+    source /home/mrbigheart/workspace/gopro_env/bin/activate && python $script_path
+'
+Restart=on-failure
+RestartSec=60
+WatchdogSec=120
+
+# Ensure the script runs as a specific user
+User=pi
+WorkingDirectory=/home/mrbigheart/workspace/gopro_timelapse
+
+# Ensure network is fully operational before starting
+ExecStartPre=/bin/bash -c 'until ping -c1 8.8.8.8; do sleep 5; done'
+
+# If the service fails 3 times, execute the failure handler
+OnFailure=gopro_timelapse-failure.service
+
+[Install]
+WantedBy=multi-user.target
