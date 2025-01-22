@@ -1,15 +1,17 @@
 # GoPro Timelapse Controller
 
 *Did you ever want to create an ultra-long GoPro timelapse without special equipment?*
-
+<br>
 *This project provides a Python-based solution to automate the entire workflow on a Raspberry Pi. 
 It handles Wi-Fi switching between the Pi and the GoPro, schedules periodic photo captures, 
 keeps the system time in sync, and even sends alerts if something goes wrong. All configurable.
 Designed to run continuously as a `systemd` service, it ensures your timelapse runs 
 smoothly for extended periods with minimal intervention.*
-
+<br>
 *This was designed for a six month timelapse, with two photos per hour. But feel free to adapt it.*
 
+<br>
+<br>
 
 ## Features
 
@@ -27,11 +29,13 @@ smoothly for extended periods with minimal intervention.*
 - On error or routine status updates, the script sends notes to a configured PushBullet account.
 
 **4. Persistent State**
-- Optionally saves counters (photo count, error retries, last photo time, etc.) to a JSON file, so the script can pick up where it left off after power outages.
+- Optionally saves counters (photo count, error retries, last photo time, etc.) to a JSON file, so the script can pick up where it left off after power outages. There's more to say on this topic, as the GpPro won't restart so we need to intervene, but at least we'll get a push notification.
 
 **5. Logging**
-- Uses a central Python logger, which can write to rotating files, console output, or both.
+- Uses a central Python logger, which can write to rotating files, console output (configured for both).
 
+<br>
+<br>
 
 ## Typical Flow
 
