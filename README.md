@@ -7,8 +7,9 @@ It handles Wi-Fi switching between the Pi and the GoPro, schedules periodic phot
 keeps the system time in sync, and even sends alerts if something goes wrong. All configurable.
 Designed to run continuously as a `systemd` service, it ensures your timelapse runs 
 smoothly for extended periods with minimal intervention.*
-<br>
-*This was designed for a six month timelapse, with two photos per hour. But feel free to adapt it.*
+
+
+*This was designed for a six month timelapse, taking two photos per hour. But feel free to adapt it.*
 
 <br>
 <br>
@@ -16,7 +17,7 @@ smoothly for extended periods with minimal intervention.*
 ## Features
 
 **1. State Machine**
-- WAITING: Most of the time, the script idles on GoPro Wi-Fi, checking if it’s time to take a photo (photo_timer minutes).
+- WAITING: Most of the time, the script idles on GoPro Wi-Fi, checking if it’s time to take a photo `photo_timer in [3, 33] and second < 30`.
 - TAKE_PHOTO: Ensures we are on GoPro Wi-Fi, wakes the camera, captures a photo, then transitions to SEND_UPDATE.
 - SEND_UPDATE: Switches to the home/router Wi-Fi, synchronizes time, sends a status notification, and saves script state. Returns to GoPro Wi-Fi when done.
 - ERROR: If anything fails repeatedly, the script attempts to recover or eventually reboots / deletes state.
