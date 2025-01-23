@@ -15,37 +15,37 @@ from goprocam import GoProCamera, constants
 class TimelapseController:
     def __init__(self, config_path="config.json"):
 
+        self.config_path = config_path
         with open(config_path, "r") as f:
             self.config = json.load(f)
+
+        # Default is WAITING
+        self.state = "WAITING"
+        # 'state' is NOT saved in state.json
+        self.state_path = "state.json"
 
         self.wifi_config = self.config["wifi"]
         self.gopro_config = self.config["gopro"]
         self.push_config = self.config["pushbullet"]
-
         self.photo_timer = self.config["photo_timer"]["minutes"]
-        self.state_path = self.config["state"]["path"]
         self.watchdog_timer = self.config["watchdog_timer"]["milliseconds"]
 
         self.wdt = WatchdogTimer(timeout=self.watchdog_timer)
+        self.debug_level = None
 
-        # Default is WAITING
-        self.state = "WAITING"
-
-        self.last_offline_alert_time = None
         self.gopro_offline_user_notified = False
-
+        self.last_offline_alert_time = None
+        self.last_photo_minute = None
         self.last_keep_alive_time = datetime.datetime.now()
+        self.execution_start_time = datetime.datetime.now()
+
+        self.photo_number = 0
         self.wifi_retry_counter = 0
-        self.max_retries = 3
         self.reach_for_help_counter = 0
         self.photo_capture_error_counter = 0
-        self.photo_number = 0
-
-        self.last_photo_minute = None
 
         self.error_retries = 0
         self.max_error_retries = 5
-        self.execution_start_time = datetime.datetime.now()
 
         signal.signal(signal.SIGINT, self.handle_sigint)
         atexit.register(self.on_exit)
@@ -229,7 +229,7 @@ class TimelapseController:
 
         else:
             # Router is offline too, or we can't connect.
-            # most likely we reboot the rpi here.
+            # most likely we reboot the whole rpi here.
             logger.warning("Router is offline as well; can't do a push. Remain in OFFLINE_ALERT.")
 
 
@@ -465,6 +465,35 @@ class TimelapseController:
                 logger.info("Invalid MAC address format")
         except Exception as e:
             logger.error(f"Error sending WOL packet: {e}")
+
+    def reload_config(self):
+        """
+        Re-read 'config.json' from disk and update all relevant fields
+        (wifi_config, gopro_config, rpi, push_config, photo_timer, etc.).
+        """
+        try:
+            with open(self.config_path, "r") as f:
+                new_config = json.load(f)
+
+            # Update everything you need
+            self.wifi_config = new_config["wifi"]
+            self.gopro_config = new_config["gopro"]
+
+            self.push_config = new_config["pushbullet"]
+            self.photo_timer = new_config["photo_timer"]["minutes"]
+
+            self.watchdog_timer = new_config["watchdog_timer"]["milliseconds"]
+            # If you want to re-instantiate the WatchdogTimer with new time:
+            # self.wdt = WatchdogTimer(timeout=self.watchdog_timer)
+
+            self.debug_level = new_config["debug_level"]
+
+            self.config = new_config
+
+            logger.info("NEW config reloaded successfully..")
+        except Exception as e:
+            logger.error(f"Failed to reload config: {e}")
+
 
     def load_state(self):
         try:
