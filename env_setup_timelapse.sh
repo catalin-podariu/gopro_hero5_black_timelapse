@@ -61,9 +61,9 @@ StartLimitBurst=3
 Type=simple
 ExecStart=/bin/bash -c '
     config_file="/home/timelapse/config.json";
-    username=$(jq -r .rpi.username $config_file);
-    script_path=$(jq -r .rpi.path $config_file);
-    work_dir=$(jq -r .rpi.work_dir $config_file);
+    username=$(jq -r .rpi_service.username $config_file);
+    script_path=$(jq -r .rpi_service.path $config_file);
+    work_dir=$(jq -r .rpi_service.work_dir $config_file);
     source /home/gopro_env/bin/activate && python $script_path
 '
 Restart=on-failure
@@ -101,7 +101,7 @@ ExecStart=/bin/bash -c '
 
     # Shutdown the Raspberry Pi
     # sudo shutdown -h now
-    echo "This would have shut down the rpi."
+    echo "This would have shut down the whole rpi."
 '
 
 [Install]

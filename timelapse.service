@@ -17,7 +17,7 @@ StartLimitBurst=3
 Type=simple
 
 # Load configuration and execute script
-ExecStart=/bin/bash -c "config_file='/home/timelapse/config.json'; username=$(jq -r .rpi.username $config_file); script_path=$(jq -r .rpi.path $config_file); work_dir=$(jq -r .rpi.work_dir $config_file); sudo source /home/gopro_env/bin/activate && python $script_path"
+ExecStart=/bin/bash -c "config_file='/home/timelapse/config.json'; username=$(jq -r .rpi_service.username $config_file); script_path=$(jq -r .rpi_service.path $config_file); work_dir=$(jq -r .rpi_service.work_dir $config_file); sudo source /home/gopro_env/bin/activate && python $script_path"
 
 Restart=on-failure
 RestartSec=60

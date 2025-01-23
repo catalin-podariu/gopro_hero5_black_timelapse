@@ -14,7 +14,7 @@ ExecStart=/bin/bash -c "config_file='/home/timelapse/config.json'; \
             -H \"Content-Type: application/json\" \
             -d '{\"type\":\"note\",\"title\":\"Critical Alert\",\"body\":\"'\"\$(date +'%Y-%m-%d %H:%M:%S') -- \$message\"'}'; \
     fi; \
-    echo \"This would have shut down the rpi.\"; \
+    echo \"This would have shut down the whole rpi.\"; \
     echo blah "
 
 [Install]

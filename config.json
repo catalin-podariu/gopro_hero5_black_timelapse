@@ -11,6 +11,7 @@
   },
   "rpi":{
     "ip": "ip_here",
+  "rpi_service":{
     "port": 8080,
     "path": "/home/timelapse/timelapse.py",
     "username": "username_here",
@@ -30,4 +31,5 @@
   },
   "debug_level": "logging.DEBUG",
   "logging_path": "/home/timelapse/logs"
+  "logging_path": "/home/timelapse/logs/"
 }
