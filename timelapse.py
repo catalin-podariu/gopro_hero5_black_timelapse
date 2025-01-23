@@ -7,7 +7,6 @@ import datetime
 import atexit
 import signal
 import sys
-from watchdog import WatchdogTimer
 from logger import logger
 from goprocam import GoProCamera, constants
 
@@ -28,9 +27,6 @@ class TimelapseController:
         self.gopro_config = self.config["gopro"]
         self.push_config = self.config["pushbullet"]
         self.photo_timer = self.config["photo_timer"]["minutes"]
-        self.watchdog_timer = self.config["watchdog_timer"]["milliseconds"]
-
-        self.wdt = WatchdogTimer(timeout=self.watchdog_timer)
         self.debug_level = None
 
         self.gopro_offline_user_notified = False
@@ -110,11 +106,6 @@ class TimelapseController:
 
 
     def handle_take_photo_state(self):
-        """
-        Switch to the GoPro Wi-Fi if needed, take the photo.
-        If success, go to SEND_UPDATE. If failed, go to ERROR.
-        """
-        # 1. Ensure we're on GoPro Wi-Fi
         gopro_ssid = self.gopro_config["ssid"]
         if not self.ensure_wifi_connected(gopro_ssid):
             # If we can’t connect to GoPro Wi-Fi, error out
@@ -122,13 +113,11 @@ class TimelapseController:
             # self.state = "ERROR"
             return
 
-        # 2. Actually take the photo
         try:
             self.take_photo()
             self.last_photo_minute = datetime.datetime.now().minute
             self.last_keep_alive_time = datetime.datetime.now()
 
-            # 3. On success, proceed to SEND_UPDATE
             self.state = "SEND_UPDATE"
         except Exception as e:
             logger.error(f"Error taking photo: {e}")
@@ -162,7 +151,6 @@ class TimelapseController:
 
     def handle_error_state(self):
         """
-          - We increment error_retries. If < max_error_retries, try re-init or re-connect.
           - If that fails too many times, we reboot the r-pi.
         """
         self.error_retries += 1
@@ -177,7 +165,7 @@ class TimelapseController:
         else:
             logger.error("Exceeded max error retries. Considering a forced reboot or state reset.")
             # o
-            # subprocess.run(["sudo", "reboot"])
+            # subprocess.run(["sudo", "reboot"]) TODO what about this?
 
             self.state = "WAITING"
             self.error_retries = 0
@@ -188,7 +176,7 @@ class TimelapseController:
         then attempts GoPro Wi-Fi. If both fail, remains offline.
 
         - Send one immediate 'GoPro offline' notification if this is the first time.
-        - Then send repeated notifications every 20 minutes if it remains offline.
+        - Then send repeated notifications every 20 minutes if it remains offline (and there's internet).
         """
         router_ssid = self.wifi_config["ssid"]
         now = datetime.datetime.now()
@@ -198,14 +186,13 @@ class TimelapseController:
 
         # 1) Attempt to connect to router
         if self.ensure_wifi_connected(router_ssid):
-            # Router is OK, try the GoPro
             self.last_offline_alert_time = now
 
             gopro_ssid = self.gopro_config["ssid"]
             if self.ensure_wifi_connected(gopro_ssid):
                 # Full recovery: both router & GoPro are up
-                logger.info("Router & GoPro reconnected. Returning to WAITING.")
-                self.gopro_offline_user_notified = False  # reset
+                logger.info("Router AND GoPro reconnected. Returning to WAITING.")
+                self.gopro_offline_user_notified = False  # Resetting this flag
                 self.state = "WAITING"
             else:
                 # We can't reach GoPro, but router is fine
@@ -259,7 +246,7 @@ class TimelapseController:
                         return line.split(":")[1]
             return None
         except Exception as e:
-            logger.error(f"Failed to get current Wi-Fi: {e}")
+            logger.error(f"Failed to get current wifi: x")
             return None
 
     def switch_wifi(self, target_ssid):
@@ -275,7 +262,7 @@ class TimelapseController:
                     logger.info(f"Connected to {target_ssid} successfully.")
                     return True
             except subprocess.CalledProcessError as e:
-                logger.warning(f"nmcli connect attempt failed. SSID not found or password is incorrect.")
+                logger.warning(f"nmcli connect attempt failed. SSID not found or password is incorrect. Message x" )
                 time.sleep(3)
 
         logger.error(f"Failed to connect to {target_ssid} after {max_tries} tries.")
@@ -478,14 +465,8 @@ class TimelapseController:
             # Update everything you need
             self.wifi_config = new_config["wifi"]
             self.gopro_config = new_config["gopro"]
-
             self.push_config = new_config["pushbullet"]
             self.photo_timer = new_config["photo_timer"]["minutes"]
-
-            self.watchdog_timer = new_config["watchdog_timer"]["milliseconds"]
-            # If you want to re-instantiate the WatchdogTimer with new time:
-            # self.wdt = WatchdogTimer(timeout=self.watchdog_timer)
-
             self.debug_level = new_config["debug_level"]
 
             self.config = new_config
