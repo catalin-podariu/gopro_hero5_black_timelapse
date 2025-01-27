@@ -127,7 +127,7 @@ class TimelapseController:
         router_ssid = self.wifi_config["ssid"]
 
         if not self.ensure_wifi_connected(router_ssid):
-            logger.error("Failed to connect to router Wi-Fi. ERROR.")
+            logger.error(f"Failed to connect to {router_ssid}. ERROR.")
             self.state = "ERROR"
             return
 
@@ -137,7 +137,7 @@ class TimelapseController:
 
         gopro_ssid = self.gopro_config["ssid"]
         if not self.ensure_wifi_connected(gopro_ssid):
-            logger.error("Failed to reconnect to GoPro after sending status. ERROR.")
+            logger.error(f"Failed to reconnect to {gopro_ssid} after sending status. ERROR.")
             self.state = "ERROR"
             return
 
@@ -255,8 +255,6 @@ class TimelapseController:
                 if (self.get_current_wifi() or "").lower() == target_ssid.lower():
                     logger.info(f"Connected to {target_ssid} successfully.")
                     return True
-                if attempt == 3:
-                    self.restart_wifi()
             except subprocess.CalledProcessError as e:
                 logger.warning(f"nmcli connect attempt failed. SSID not found or password is incorrect. Message x")
                 time.sleep(3)
@@ -292,9 +290,10 @@ class TimelapseController:
         # Send WOL every 9 minutes
         if send_wol:
             self.send_wol()
-            time.sleep(5)  # short sleep to let the packet do its thing
+            time.sleep(3)  # short sleep to let the packet do its thing
+            self.send_wol()
 
-            if not self.ensure_wifi_connected(self.gopro_config["ip"]):
+            if not self.check_network_reachable(self.gopro_config["ip"]):
                 logger.warning("GoPro not reachable even after sending WOL. Possibly off already. But why?!")
                 return
 
@@ -324,7 +323,7 @@ class TimelapseController:
             time.sleep(2)
 
             # Connect to camera
-            self.ensure_wifi_connected(self.gopro_config["ip"])
+            self.check_network_reachable(self.gopro_config["ip"])
             logger.info("Connecting to GoPro camera...")
 
             gopro = GoProCamera.GoPro(self.gopro_config["ip"])
@@ -429,6 +428,19 @@ class TimelapseController:
             logger.error(f"Time sync failed: {e}")
         except Exception as e:
             logger.error(f"Unexpected error in time sync: {e}")
+
+    def check_network_reachable(self, ip, retries=5, delay=4):
+        for attempt in range(retries):
+            try:
+                subprocess.run(["ping", "-c", "1", ip], check=True, stdout=subprocess.DEVNULL)
+                logger.info(f"Network is reachable at {ip}")
+                return True
+            except subprocess.CalledProcessError:
+                logger.warning(f"Ping to {ip} failed. Attempt {attempt + 1}/{retries}.")
+                self.restart_wifi()
+                time.sleep(delay)
+        logger.error(f"Network not reachable after {retries} attempts.")
+        return False
 
     def send_wol(self):
         mac_address = self.gopro_config["mac"]

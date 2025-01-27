@@ -23,10 +23,12 @@
   },
   "keep_alive": {
     "minutes": [6, 19, 26, 39, 46, 59]
+    "minutes": [0, 3, 6, 9, 15, 18, 21, 24, 27, 30, 36, 39, 42, 45, 48, 54, 57]
   },
   "photo_timer": {
     "minutes": [3, 33]
     "minutes": [12, 32, 52]
+    "minutes": [12, 33, 51]
   },
   "watchdog_timer": {
     "milliseconds": 120
