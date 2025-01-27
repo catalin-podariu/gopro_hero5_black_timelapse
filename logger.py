@@ -16,7 +16,7 @@ if os.path.exists(CONFIG_PATH):
     LOG_DIR = config.get("logging_path", "./logs")
 else:
     # Fallback defaults if config.json doesn't exist
-    LOG_DIR = "/home/timelapse/logs"
+    LOG_DIR = "/home/timelapse/logs/"
 
 os.makedirs(LOG_DIR, exist_ok=True)
 

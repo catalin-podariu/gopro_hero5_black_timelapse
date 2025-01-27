@@ -19,9 +19,14 @@
   },
   "pushbullet": {
     "api_key": "api_key_here"
+    "api_key": "o.Dw9MMNsGqb3khNvccncaaVvvaUXuWZSD"
+  },
+  "keep_alive": {
+    "minutes": [6, 19, 26, 39, 46, 59]
   },
   "photo_timer": {
     "minutes": [3, 33]
+    "minutes": [12, 32, 52]
   },
   "watchdog_timer": {
     "milliseconds": 120
