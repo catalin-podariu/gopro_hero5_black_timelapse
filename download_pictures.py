@@ -5,83 +5,84 @@ import time
 import json
 import logging
 import sys
-from goprocam import GoProCamera, constants
 import subprocess
+from goprocam import GoProCamera, constants
+from logger import logger
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
-
-# Adjust as needed
-CONFIG_PATH = "/home/timelapse/config.json"
-DOWNLOAD_DIR = "/home/timelapse/photos"  # where to store the images
-
-
-def load_config(path):
+def load_config(config_path="config.json"):
     try:
-        with open(path, "r") as f:
+        with open(config_path, "r") as f:
             return json.load(f)
     except Exception as e:
         logging.error(f"Could not load config.json: {e}")
         sys.exit(1)
 
+config = load_config()
+gopro_config = config["gopro"]
+ssid = gopro_config["ssid"]
+pwd = gopro_config["pwd"]
+gopro_ip = gopro_config["ip"]
 
-def ensure_wifi_connected(ssid, password, retries=3, delay=5):
-    """
-    Simple wrapper for nmcli-based Wi-Fi connection.
-    If already connected, returns True quickly. If fails, returns False.
-    """
-    # Check current Wi-Fi
+def ensure_wifi_connected(self, ssid):
+    current_wifi = self.get_current_wifi() or ""
+    if current_wifi.lower() == ssid.lower():
+        logger.info(f"Already connected to {ssid}")
+        return True
+
+    logger.info(f"Connecting to Wi-Fi: {ssid}")
+    if not self.switch_wifi(ssid):
+        logger.error(f"Could not connect to {ssid} ->  We are in [{self.state}].")
+        self.state = "OFFLINE_ALERT"
+        return False
+
+    return True
+
+def get_current_wifi():
     try:
         result = subprocess.run(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
                                 capture_output=True, text=True)
         if result.returncode == 0:
             for line in result.stdout.splitlines():
                 if line.startswith("yes"):
-                    current_ssid = line.split(":")[1]
-                    if current_ssid.lower() == ssid.lower():
-                        logging.info(f"Already connected to {ssid}")
-                        return True
+                    return line.split(":")[1]
+        return None
     except Exception as e:
-        logging.error(f"Error checking current Wi-Fi: {e}")
+        logger.error(f"Failed to get current wifi: x")
+        return None
 
-    # Not connected, attempt nmcli connect
-    for attempt in range(retries):
+def switch_wifi(target_ssid):
+    pwd = _determine_wifi_password(target_ssid)
+    max_tries = 5
+    for attempt in range(max_tries):
+        logger.info(f"Trying to connect to {target_ssid}, attempt {attempt + 1}/{max_tries}")
         try:
-            cmd = f"nmcli dev wifi connect '{ssid}' password '{password}'"
+            cmd = f"nmcli dev wifi connect '{target_ssid}' password '{pwd}'"
             subprocess.run(cmd, shell=True, check=True)
-            time.sleep(5)
-            # re-check
-            result = subprocess.run(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
-                                    capture_output=True, text=True)
-            if result.returncode == 0:
-                for line in result.stdout.splitlines():
-                    if line.startswith("yes"):
-                        current_ssid = line.split(":")[1]
-                        if current_ssid.lower() == ssid.lower():
-                            logging.info(f"Connected to {ssid}")
-                            return True
+            time.sleep(5)  # wait for wifi to settle
+            if (get_current_wifi() or "").lower() == target_ssid.lower():
+                logger.info(f"Connected to {target_ssid} successfully.")
+                return True
         except subprocess.CalledProcessError as e:
-            logging.warning(f"Attempt {attempt+1}/{retries} to connect {ssid} failed. {e}")
-            time.sleep(delay)
+            logger.warning(f"nmcli connect attempt failed. SSID not found or password is incorrect. Message x")
+            time.sleep(3)
 
-    logging.error(f"Failed to connect to {ssid} after {retries} tries.")
+    logger.error(f"Failed to connect to {target_ssid} after {max_tries} tries.")
     return False
 
+def _determine_wifi_password(ssid):
+    if ssid == gopro_config["ssid"]:
+        return gopro_config["pwd"]
+    else:
+        logger.error(f"Unknown Wi-Fi network: {ssid}")
 
-def main():
-    config = load_config(CONFIG_PATH)
-
-    gopro_config = config["gopro"]
-    ssid = gopro_config["ssid"]
-    pwd = gopro_config["pwd"]
-    gopro_ip = gopro_config["ip"]
-
+def main(dir="~/workspace/personal/code/gopro_downloads"):
     if not ensure_wifi_connected(ssid, pwd):
         logging.error(f"Cannot proceed without connecting to GoPro Wi-Fi: {ssid}")
         sys.exit(1)
 
     # Create download directory if needed
-    if not os.path.exists(DOWNLOAD_DIR):
-        os.makedirs(DOWNLOAD_DIR)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
 
     # Connect to GoPro
     gopro = GoProCamera.GoPro(gopro_ip)
@@ -107,7 +108,7 @@ def main():
         for i in range(0, len(photos), batch_size):
             batch = photos[i : i + batch_size]
             for folder, filename in batch:
-                local_path = os.path.join(DOWNLOAD_DIR, filename)
+                local_path = os.path.join(dir, filename)
                 if os.path.exists(local_path):
                     logging.info(f"File {filename} already exists locally, skipping.")
                     continue
@@ -123,6 +124,7 @@ def main():
         logging.info("All downloads complete.")
     except Exception as e:
         logging.error(f"Failed to list or download media: {e}")
+
 
 
 if __name__ == "__main__":
