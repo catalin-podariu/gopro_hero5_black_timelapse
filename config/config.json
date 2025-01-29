@@ -4,39 +4,28 @@
     "pwd": "pwd_here"
   },
   "gopro": {
-    "mac": "mac_here",
-    "ip": "ip_here",
+    "mac": "06:41:69:50:f0:6a",
+    "ip": "gopro_ip_here",
     "ssid": "ssid_here",
     "pwd": "pwd_here"
   },
-  "rpi":{
-    "ip": "ip_here",
   "rpi_service":{
+    "ip": "heimdall.local",
     "port": 8080,
     "path": "/home/timelapse/timelapse.py",
-    "username": "username_here",
+    "username": "mrbigheart",
+    "password": "raspberry",
+    "ssh_port": 22,
     "work_dir": "/home/timelapse"
   },
   "pushbullet": {
-    "api_key": "api_key_here"
-    "api_key": "o.Dw9MMNsGqb3khNvccncaaVvvaUXuWZSD"
+    "api_key": "o.api_key_here"
   },
   "keep_alive": {
-    "minutes": [6, 19, 26, 39, 46, 59]
     "minutes": [0, 3, 6, 9, 15, 18, 21, 24, 27, 30, 36, 39, 42, 45, 48, 54, 57]
   },
   "photo_timer": {
-    "minutes": [3, 33]
-    "minutes": [12, 32, 52]
     "minutes": [12, 33, 51]
   },
-  "watchdog_timer": {
-    "milliseconds": 120
-  },
-  "state": {
-    "path": "/home/timelapse/state.json"
-  },
-  "debug_level": "logging.DEBUG",
-  "logging_path": "/home/timelapse/logs"
   "logging_path": "/home/timelapse/logs/"
 }

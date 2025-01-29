@@ -9,18 +9,16 @@ import time
 import re
 
 
-CONFIG_PATH = "config.json"
+CONFIG_PATH = "config/config.json"
 if os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "r") as f:
         config = json.load(f)
     LOG_DIR = config.get("logging_path", "./logs")
 else:
-    # Fallback defaults if config.json doesn't exist
     LOG_DIR = "/home/timelapse/logs/"
 
 os.makedirs(LOG_DIR, exist_ok=True)
 
-# 1) Custom "daily" handler that updates the active filename each midnight
 class DailyNamedFileHandler(logging.handlers.TimedRotatingFileHandler):
     """
     A custom TimedRotatingFileHandler that uses a daily-based filename
@@ -35,7 +33,6 @@ class DailyNamedFileHandler(logging.handlers.TimedRotatingFileHandler):
         self.prefix = prefix
         self.date_format = date_format
 
-        # Start with today's filename
         filename = self._current_filename()
         super().__init__(
             filename=filename,
@@ -52,15 +49,12 @@ class DailyNamedFileHandler(logging.handlers.TimedRotatingFileHandler):
         self.extMatch = re.compile(r"^\d{4}_\d{2}_\d{2}$")
 
     def _current_filename(self):
-        # e.g. "daily_logs_2025_01_23.log"
         datestr = time.strftime(self.date_format)
         return os.path.join(self.directory, f"{self.prefix}_{datestr}.log")
 
     def doRollover(self):
-        # Let parent handle the actual rotation of the old file
         super().doRollover()
 
-        # Now update self.baseFilename to today's new file
         new_name = self._current_filename()
         self.baseFilename = os.path.abspath(new_name)
 
@@ -69,7 +63,7 @@ class DailyNamedFileHandler(logging.handlers.TimedRotatingFileHandler):
             self.stream = self._open()
 
 
-# Create a custom formatter that can omit timestamps if 'plain' is set
+# Create a custom formatter that can omit timestamps if 'plain' is set (used for logo)
 class PlainFormatter(logging.Formatter):
     def format(self, record):
         if getattr(record, "plain", False):
@@ -108,7 +102,6 @@ logger.addHandler(console_handler)
 # Monkey-patch a logo() method onto the logger
 def logo_method(self):
     for line in intro_logo.strip("\n").splitlines():
-        # Use extra={"plain": True} so the PlainFormatter prints raw text
         self.log(logging.INFO, line, extra={"plain": True})
 
 logger.logo = types.MethodType(logo_method, logger)

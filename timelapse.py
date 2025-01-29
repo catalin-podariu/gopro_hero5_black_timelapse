@@ -1,26 +1,24 @@
 import atexit
 import datetime
-import json
-import requests
 import signal
-import socket
-import subprocess
 import sys
 import time
-from goprocam import GoProCamera, constants
 
-from logger import logger
+from gptl_util import sync_time
+from gptl_gopro import GptlGopro
+from gptl_notification import GptlNotification
+from gptl_wifi import GptlWifi
+from gptl_config import GptlConfig
+from gptl_state import GptlState
+from gptl_logger import logger
 
 
 class TimelapseController:
-    def __init__(self, config_path="config.json"):
+    def __init__(self):
+        self.config = GptlConfig().get_config()
 
-        self.config_path = config_path
-        with open(config_path, "r") as f:
-            self.config = json.load(f)
-
-        self.state = "WAITING" # default value
-        # 'state' is NOT saved in state.json
+        # this is the default value. also.. 'state' is NOT saved in state.json
+        self.state = "WAITING"
         self.state_path = "state.json"
 
         self.wifi_config = self.config["wifi"]
@@ -28,24 +26,28 @@ class TimelapseController:
         self.push_config = self.config["pushbullet"]
         self.photo_timer = self.config["photo_timer"]["minutes"]
         self.keep_alive_timer = self.config["keep_alive"]["minutes"]
-        self.debug_level = None
+
+        self.restart_counter = -1 # because it will be incremented before the first photo
+        self.max_error_retries = 5
+
+        self.gptl_gopro = GptlGopro(self.gopro_config)
+        self.gptl_wifi = GptlWifi(self.wifi_config, self.gopro_config)
+        self.gptl_state = GptlState(self.state_path)
+        self.gptl_notification = GptlNotification(self.push_config, self.restart_counter)
 
         self.is_send_20_min_alert = False
         self.last_offline_alert_time = None
         self.last_photo_minute = None
         self.execution_start_time = datetime.datetime.now()
 
-        self.wifi_retry_counter = 0
-        self.reach_for_help_counter = 0
         self.photo_capture_error_counter = 0
         self.error_retries_counter = 0
-
-        self.restart_counter = -1 # because it will be incremented before the first photo
-        self.max_error_retries = 5
 
         signal.signal(signal.SIGINT, self.handle_sigint)
         atexit.register(self.on_exit)
 
+    # ------------------------------------------------------------------
+    #                           MAIN CYCLE
     # ------------------------------------------------------------------
 
     def main_cycle(self):
@@ -59,7 +61,7 @@ class TimelapseController:
         self.restart_counter += 1
         while True:
             try:
-                logger.info(f"Starting main cycle. Current state = {self.state}")
+                logger.info(f"Starting main cycle. Current state [{self.state}]")
                 if self.state == "WAITING":
                     self.handle_waiting_state()
                 elif self.state == "TAKE_PHOTO":
@@ -84,6 +86,8 @@ class TimelapseController:
                 time.sleep(10)
 
     # ------------------------------------------------------------------
+    #                           MAIN CYCLE
+    # ------------------------------------------------------------------
 
     def handle_waiting_state(self):
         now = datetime.datetime.now()
@@ -98,20 +102,20 @@ class TimelapseController:
                 logger.debug("Already took a photo this minute. Doing nothing.")
         # Only 20 sec. here, because it usually takes 25 seconds to complete, and there's no need to do it twice
         elif minute in self.keep_alive_timer and second < 20:
-            self.keep_alive(True)
+            self.gptl_wifi.keep_alive(True)
         else:
-            self.keep_alive(False)
+            self.gptl_wifi.keep_alive(False)
 
     def handle_take_photo_state(self):
         gopro_ssid = self.gopro_config["ssid"]
-        if not self.ensure_wifi_connected(gopro_ssid):
+        if not self.gptl_wifi.ensure_wifi_connected(gopro_ssid):
             # If we can’t connect to GoPro Wi-Fi, error out
             logger.error(f"Failed to connect to GoPro Wi-Fi. We are in [{self.state}].")
             # self.state = "ERROR"
             return
 
         try:
-            self.take_photo()
+            self.gptl_gopro.take_photo()
             self.last_photo_minute = datetime.datetime.now().minute
 
             self.state = "SEND_UPDATE"
@@ -127,17 +131,17 @@ class TimelapseController:
         """
         router_ssid = self.wifi_config["ssid"]
 
-        if not self.ensure_wifi_connected(router_ssid):
+        if not self.gptl_wifi.ensure_wifi_connected(router_ssid):
             logger.error(f"Failed to connect to {router_ssid}. ERROR.")
             self.state = "ERROR"
             return
 
-        self.sync_time()
-        self.send_status()
-        self.save_state()
+        sync_time()
+        self.gptl_notification.send_status()
+        self.gptl_state.save_state()
 
         gopro_ssid = self.gopro_config["ssid"]
-        if not self.ensure_wifi_connected(gopro_ssid):
+        if not self.gptl_wifi.ensure_wifi_connected(gopro_ssid):
             logger.error(f"Failed to reconnect to {gopro_ssid} after sending status. ERROR.")
             self.state = "ERROR"
             return
@@ -160,8 +164,6 @@ class TimelapseController:
             self.state = "OFFLINE_ALERT"
         else:
             logger.error("Exceeded max error retries. Considering a forced reboot or state reset.")
-            # subprocess.run(["sudo", "reboot"]) TODO do this if from the first error didn't pass more than 4..5 minutes
-            # if more than 5 minutes passed.. there is a good chance GoPro is off, so we can't recover.
             self.state = "WAITING"
             self.error_retries_counter = 0
 
@@ -180,17 +182,17 @@ class TimelapseController:
             self.last_offline_alert_time = now - datetime.timedelta(hours=1)
 
         # Attempt to connect to router
-        if self.ensure_wifi_connected(router_ssid):
+        if self.gptl_wifi.ensure_wifi_connected(router_ssid):
             self.last_offline_alert_time = now
 
             gopro_ssid = self.gopro_config["ssid"]
-            if self.ensure_wifi_connected(gopro_ssid):
+            if self.gptl_wifi.ensure_wifi_connected(gopro_ssid):
                 logger.info("Router AND GoPro reconnected. Returning to WAITING.")
                 self.state = "WAITING"
             else:
                 time_since_last_offline_alert = now - self.last_offline_alert_time
                 if time_since_last_offline_alert.total_seconds() >= 1200:  # 20 minutes
-                    self.send_notification(
+                    self.gptl_notification.send_alert(
                         "GoPro OFFLINE!",
                         "\nSTILL CAN NOT connect to GoPro. [20 min repeat] Sent at "
                     )
@@ -198,7 +200,7 @@ class TimelapseController:
                 else:
                     if not self.is_send_20_min_alert:
                         # Send an immediate, one-time alert
-                        self.send_notification(
+                        self.gptl_notification.send_alert(
                             "GoPro OFFLINE!",
                             "\nFirst-time alert: I CAN NOT connect to GoPro. Sent at "
                         )
@@ -208,317 +210,22 @@ class TimelapseController:
                         self.last_offline_alert_time = now
         else:
             # Router is offline too, or we can't connect.
-            self.restart_wifi()
+            self.gptl_wifi.restart_wifi()
             # if no change, a rpi reboot would be an idea as well. But may not fix anything if gopro wifi is down.
             logger.warning("Router is offline as well; can't send notification. Remain in OFFLINE_ALERT.")
 
-    # ------------------------------------------------------------------
-
-    def ensure_wifi_connected(self, ssid):
-        current_wifi = self.get_current_wifi() or ""
-        if current_wifi.lower() == ssid.lower():
-            logger.info(f"Already connected to {ssid}")
-            return True
-
-        logger.info(f"Connecting to Wi-Fi: {ssid}")
-        if not self.switch_wifi(ssid):
-            logger.error(f"Could not connect to {ssid} ->  We are in [{self.state}].")
-            self.state = "OFFLINE_ALERT"
-            return False
-
-        return True
-
-    def get_current_wifi(self):
-        try:
-            result = subprocess.run(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
-                                    capture_output=True, text=True)
-            if result.returncode == 0:
-                for line in result.stdout.splitlines():
-                    if line.startswith("yes"):
-                        return line.split(":")[1]
-            return None
-        except Exception as e:
-            logger.error(f"Failed to get current wifi: x")
-            return None
-
-    def switch_wifi(self, target_ssid):
-        pwd = self._determine_wifi_password(target_ssid)
-        max_tries = 5
-        for attempt in range(max_tries):
-            logger.info(f"Trying to connect to {target_ssid}, attempt {attempt + 1}/{max_tries}")
-            try:
-                cmd = f"nmcli dev wifi connect '{target_ssid}' password '{pwd}'"
-                subprocess.run(cmd, shell=True, check=True)
-                time.sleep(5)  # wait for wifi to settle
-                if (self.get_current_wifi() or "").lower() == target_ssid.lower():
-                    logger.info(f"Connected to {target_ssid} successfully.")
-                    return True
-            except subprocess.CalledProcessError as e:
-                logger.warning(f"nmcli connect attempt failed. SSID not found or password is incorrect. Message x")
-                time.sleep(3)
-
-        logger.error(f"Failed to connect to {target_ssid} after {max_tries} tries.")
-        return False
-
-    def _determine_wifi_password(self, ssid):
-        if ssid == self.gopro_config["ssid"]:
-            return self.gopro_config["pwd"]
-        else:
-            return self.wifi_config["pwd"]
-
-    def restart_wifi(self):
-        logger.info("Restarting Wi-Fi interface..")
-        subprocess.run(["sudo", "ifdown", "wlan0"])
-        time.sleep(5)
-        subprocess.run(["sudo", "ifup", "wlan0"])
-        time.sleep(10)
-        if self.ensure_wifi_connected(self.gopro_config["ssid"]):
-            logger.info("Wi-Fi reconnected successfully.")
-        else:
-            logger.error("Wi-Fi restart failed. Manual intervention required.")
-
-    def keep_alive(self, send_wol):
-        logger.info("Attempting to keep GoPro Wi-Fi alive..")
-
-        gopro_ssid = self.gopro_config["ssid"]
-        if not self.ensure_wifi_connected(gopro_ssid):
-            logger.warning("Cannot keep alive because we can't connect to GoPro Wi-Fi.")
-            return  # We’re probably in OFFLINE_ALERT or ERROR now
-
-        # Send WOL every 9 minutes
-        if send_wol:
-            self.send_wol()
-            time.sleep(3)  # short sleep to let the packet do its thing
-            self.send_wol()
-
-            if not self.check_network_reachable(self.gopro_config["ip"]):
-                logger.warning("GoPro not reachable even after sending WOL. Possibly off already. But why?!")
-                return
-
-            try:
-                gopro = GoProCamera.GoPro(self.gopro_config["ip"])
-                logger.info(f"Connected to GoPro. {gopro}")
-                gopro.power_on()
-                time.sleep(2)
-                gopro.mode(constants.Mode.PhotoMode)
-                time.sleep(3)
-            except Exception as e:
-                logger.error(f"Error controlling GoPro in keep_alive: {e}")
-                return
-
-            try:
-                logger.info("Coolio. Going back to sleep for now.. Still in WAITING.")
-                gopro.power_off()
-                time.sleep(3)
-            except Exception as e:
-                logger.error(f"Error powering off GoPro in keep_alive: {e}")
-                return
-
-        logger.info("keep_alive sequence completed.")
-
-    def take_photo(self):
-        try:
-            logger.info("Waking up the GoPro with Magic package.")
-            self.send_wol()
-            time.sleep(2)
-
-            # Connect to camera
-            self.check_network_reachable(self.gopro_config["ip"])
-            logger.info("Connecting to GoPro camera..")
-
-            gopro = GoProCamera.GoPro(self.gopro_config["ip"])
-            logger.info(f"Connected to GoPro. {gopro}")
-            gopro.power_on()
-
-            logger.info("Setting camera to photo mode..")
-            gopro.mode(constants.Mode.PhotoMode)
-            time.sleep(2)
-
-            # Actually taking the photo
-            logger.info("Taking photo now..")
-            gopro.take_photo()
-            time.sleep(5)
-
-            logger.info("Shutting down GoPro..")
-            gopro.power_off()
-            time.sleep(3)
-
-        except Exception as e:
-            self.photo_capture_error_counter += 1
-            raise e
-
-    def send_status(self):
-        # logger.error(f"[STATUS] {title}: {message}")
-        url = "https://api.pushbullet.com/v2/pushes"
-        headers = {
-            "Access-Token": self.push_config["api_key"],
-            "Content-Type": "application/json"
-        }
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        data = {
-            "type": "note",
-            "title": "Time-lapse update",
-            "body": f"Don't worry.. all iz good! \n{timestamp} "
-                    f"- Temp is [{self.rpi_temp()}] "
-                    f"- Restart counter: [{self.restart_counter}]"
-        }
-        try:
-            resp = requests.post(url, headers=headers, json=data)
-            if resp.status_code == 200:
-                logger.info(f"Push notification sent successfully --> [STATUS] {timestamp} -- {data}")
-            else:
-                logger.error(f"This is PushBullet's error: {resp.status_code}, {resp.text}")
-        except Exception as e:
-            logger.error(f"Error sending status: {e}")
-
-    def send_notification(self, title, message):
-        logger.error(f"[ALERT] {title}: {message}")
-        url = "https://api.pushbullet.com/v2/pushes"
-        headers = {
-            "Access-Token": self.push_config["api_key"],
-            "Content-Type": "application/json"
-        }
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        data = {
-            "type": "note",
-            "title": f"[ALERT] {title}",
-            "body": f"{message} -- [{timestamp}]"
-        }
-        try:
-            resp = requests.post(url, headers=headers, json=data)
-            if resp.status_code == 200:
-                logger.info("Push notification sent..")
-            else:
-                logger.error(f"Pushbullet error: {resp.status_code} -> {resp.text}")
-        except Exception as e:
-            logger.error(f"Error sending pushbullet: {e}")
-
-    def sync_time(self):
-        try:
-            logger.info("Syncing time via ntpdate..")
-            subprocess.run(["sudo", "ntpdate", "-u", "pool.ntp.org"], check=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            logger.info("Time sync successful.")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Time sync failed: {e}")
-        except Exception as e:
-            logger.error(f"Unexpected error in time sync: {e}")
-
-    def check_network_reachable(self, ip, retries=5, delay=4):
-        for attempt in range(retries):
-            try:
-                subprocess.run(["ping", "-c", "1", ip], check=True, stdout=subprocess.DEVNULL)
-                logger.info(f"Network is reachable at {ip}")
-                return True
-            except subprocess.CalledProcessError:
-                logger.warning(f"Ping to {ip} failed. Attempt {attempt + 1}/{retries}.")
-                self.restart_wifi()
-                time.sleep(delay)
-        logger.error(f"Network not reachable after {retries} attempts.")
-        return False
-
-    def send_wol(self):
-        mac_address = self.gopro_config["mac"]
-        try:
-            if len(mac_address) == 17 and mac_address.count(':') == 5:
-                mac_bytes = bytes.fromhex(mac_address.replace(':', ''))
-                magic_packet = b'\xff' * 6 + mac_bytes * 16
-
-                # Send the magic packet to the broadcast address
-                with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                    sock.settimeout(3)
-                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                    sock.sendto(magic_packet, ('<broadcast>', 9))
-                logger.info(f"Magic packet sent to {mac_address}")
-            else:
-                logger.info("Invalid MAC address format")
-        except Exception as e:
-            logger.error(f"Error sending WOL packet: {e}")
-
-    def reload_config(self):
-        """
-        Re-read 'config.json' from disk and update all relevant fields
-        (wifi_config, gopro_config, rpi, push_config, photo_timer, etc.).
-        """
-        try:
-            with open(self.config_path, "r") as f:
-                new_config = json.load(f)
-
-            # Update everything you need
-            self.wifi_config = new_config["wifi"]
-            self.gopro_config = new_config["gopro"]
-            self.debug_level = new_config["debug_level"]
-            self.push_config = new_config["pushbullet"]
-            self.photo_timer = new_config["photo_timer"]["minutes"]
-            self.keep_alive_timer = new_config["keep_alive"]["minutes"]
-
-            self.config = new_config
-
-            logger.info("NEW config reloaded successfully..")
-        except Exception as e:
-            logger.error(f"Failed to reload config: {e}")
-
-    def load_state(self):
-        try:
-            with open(self.state_path, "r") as f:
-                state_data = json.load(f)
-
-            # Convert string timestamps back to datetime objects
-            for key in ["last_photo_minute", "last_offline_alert_time"]:
-                if key in state_data:
-                    state_data[key] = self.fromisoformat_fallback(state_data[key])
-            return state_data
-        except FileNotFoundError as e:
-            logger.error(f"Error loading state file: {e}")
-            return {}
-        except Exception as e:
-            logger.error(f"Error loading state: {e}")
-            return {}
-
-    def save_state(self):
-        data = {
-            "last_photo_minute": self.last_photo_minute if self.last_photo_minute else None,
-            "last_offline_alert_time": self.fromisoformat_fallback(self.last_offline_alert_time.isoformat()) if self.last_offline_alert_time else None,
-            "photo_capture_error_counter": self.photo_capture_error_counter if self.photo_capture_error_counter else 0,
-            "reach_for_help_counter": self.reach_for_help_counter if self.reach_for_help_counter else 0,
-            "error_retries": self.error_retries_counter if self.error_retries_counter else 0,
-            "max_error_retries": self.max_error_retries if self.max_error_retries else 5,
-            "execution_time_seconds": (datetime.datetime.now() - self.execution_start_time).total_seconds(),
-            "restart_counter": self.restart_counter if self.restart_counter else 0,
-        }
-        try:
-            with open(self.state_path, "w") as f:
-                json.dump(data, f, indent=4)
-            logger.info(f"Saved state to {self.state_path}.")
-        except Exception as e:
-            logger.error(f"Failed to save state: {e}")
-
-    def fromisoformat_fallback(self, iso_string):  # Python 3.6 compatibility
-        return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S")
-
-    def rpi_temp(self):
-        try:
-            temp = subprocess.run(["vcgencmd", "measure_temp"], capture_output=True, text=True)
-            if temp.returncode == 0:
-                temp_value = float(temp.stdout.strip().split('=')[1].replace("'C", ""))
-                return f"NORMAL - {temp_value}" if temp_value < 60.0 else f"HIGH - {temp_value}"
-            else:
-                return "UNKNOWN"
-        except Exception:
-            return "UNKNOWN"
 
     def on_exit(self):
-        self.save_state()
+        self.gptl_state.save_state()
         logger.info(f"Script ran for {(datetime.datetime.now() - self.execution_start_time).total_seconds()} seconds.")
         logger.info("Script is shutting down. Saving state..")
 
-    def handle_sigint(self, signal_received, frame):
+    def handle_sigint(self, signum, frame):
         logger.info("Ctrl+C received. Exiting gracefully..")
         sys.exit(0)
-
 
 # ------------------------------------------------------------------
 
 if __name__ == "__main__":
-    controller = TimelapseController("config.json")
+    controller = TimelapseController()
     controller.main_cycle()
