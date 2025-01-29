@@ -40,7 +40,7 @@ class TimelapseController:
         self.photo_capture_error_counter = 0
         self.error_retries_counter = 0
 
-        self.restart_counter = -1
+        self.restart_counter = -1 # because it will be incremented before the first photo
         self.max_error_retries = 5
 
         signal.signal(signal.SIGINT, self.handle_sigint)
