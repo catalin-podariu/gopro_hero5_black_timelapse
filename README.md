@@ -26,7 +26,7 @@
 
 # Abstract
 
-*Did you ever want to create an ultra-long GoPro time-lapse without special equipment? I'm using here a 
+*Did you ever want to create an ultra-long time-lapse without special equipment? I'm using here a 
 GoPro Hero5 Black ..which as of 2025 is already very old :)*
 <br>
 <br>
@@ -41,9 +41,9 @@ smoothly for extended periods with minimal intervention (hopefully none).*
 <br>
 <br>
 
-# Typical Flow
+# Features
 
-### **Waiting**
+### **Waiting..**
 This is where we spend most of the time. We check if it's time to take a photo or time to keep the wifi alive.
 <br>
 <br>
@@ -53,28 +53,27 @@ script because the GoPro will go to sleep after a few minutes of inactivity. If 
 back. See the error handling, lower. But, as the script is written now, this doesn't happen even if the power goes out 
 for 1..2 minutes.
 
-### **Taking Photos**
+### **Taking the photos**
 When it's time to take a photo, the script transitions to `TAKE_PHOTO`. If the rpi isn’t on the GoPro wifi, it switches,
 wakes up the camera, takes a photo, then we transition to `SEND_UPDATE`.
 
-### **Sending Updates**
+### **Sending updates**
 Once a photo is taken, the script switches to your router wifi (`SEND_UPDATE`), synchronizes the system time, and sends 
 a status push to PushBullet, then it saves the state and then switches back to the GoPro wifi (`WAITING`). 
 
-### **Error Handling**
+### **Error handling**
 If there is a file missing, or we get (mostly) any other error, the script doesn't fail. BUT! If we can't connect to the
 GoPro wifi.. which is the most important thing, the script goes to `ERROR` where retries a few times, and if it is still 
 failing.. it goes into `OFFLINE_ALERT`. This means it sends push notifications every twenty minutes, until connectivity 
 is restored. But this means user intervention is needed. Unfortunately, the GoPro can't be 'restarted'. Or, not in any 
 way I tried so far. *So, if you're going to use this script, you need to be aware of this!*
 
-### **Service Mode**
+### **systemd**
 A systemd unit file `timelapse.service` runs this script at boot. Beware of permissions and all that.
 Also, there's a `crontab` that makes sure this doesn't get stuck in a GoPro operation. I've removed the photo count,
 for example, because this will get stuck, every now and then, with no warning. And it'll halt the script. But the cronjob
 will restart the service if it's not writing in the logs for more than 40 seconds.
 
-#
 
 ## Good to know
 
