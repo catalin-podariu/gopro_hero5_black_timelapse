@@ -21,7 +21,7 @@ class TimelapseController:
         self.state = "WAITING"
         self.state_path = "state.json"
 
-        self.wifi_config = self.config["wifi"]
+        self.wifi_config = self.config["router"]
         self.gopro_config = self.config["gopro"]
         self.push_config = self.config["pushbullet"]
         self.photo_timer = self.config["photo_timer"]["minutes"]
@@ -209,9 +209,7 @@ class TimelapseController:
                         self.is_send_20_min_alert = True
                         self.last_offline_alert_time = now
         else:
-            # Router is offline too, or we can't connect.
             self.gptl_wifi.restart_wifi()
-            # if no change, a rpi reboot would be an idea as well. But may not fix anything if gopro wifi is down.
             logger.warning("Router is offline as well; can't send notification. Remain in OFFLINE_ALERT.")
 
 

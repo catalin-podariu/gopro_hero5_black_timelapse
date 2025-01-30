@@ -1,20 +1,19 @@
 {
-  "wifi": {
+  "router": {
     "ssid": "ssid_here",
-    "pwd": "pwd_here"
+    "pwd": "c2VjdXJlX3dpZmlfcHdkX2hlcmU="
   },
   "gopro": {
-    "mac": "06:41:69:50:f0:6a",
-    "ip": "gopro_ip_here",
+    "mac": "mac_here",
+    "ip": "ip_here",
     "ssid": "ssid_here",
-    "pwd": "pwd_here"
+    "pwd": "Z29wcm9fcHdk"
   },
-  "rpi_service":{
-    "ip": "heimdall.local",
+  "rpi":{
+    "ip": "192.168.1.20",
     "port": 8080,
     "path": "/home/timelapse/timelapse.py",
     "username": "mrbigheart",
-    "password": "raspberry",
     "ssh_port": 22,
     "work_dir": "/home/timelapse"
   },

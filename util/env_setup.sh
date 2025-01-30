@@ -62,6 +62,16 @@ echo "==== Creating systemd service files for timelapse and failure handling ===
 
 # timelapse.service
 sudo tee /etc/systemd/system/timelapse.service >/dev/null <<EOF
+#!/usr/bin/env bash
+
+# This script is a systemd service for the timelapse script
+# It will load the configuration file and execute the timelapse script
+# The script will be executed as root if you add the service to systemd and enable it
+
+# sudo systemctl daemon-reload
+# sudo systemctl enable timelapse.service
+# sudo systemctl start timelapse.service
+
 [Unit]
 Description=GoPro Timelapse Script
 After=network-online.target
@@ -74,7 +84,7 @@ StartLimitBurst=3
 Type=simple
 
 # Load configuration and execute script
-ExecStart=/bin/bash -c "config_file='/home/timelapse/config/config.json'; username=$(jq -r .rpi_service.username $config_file); script_path=$(jq -r .rpi_service.path $config_file); work_dir=$(jq -r .rpi_service.work_dir $config_file); . /home/gopro_env/bin/activate && python $script_path"
+ExecStart=/bin/bash -c "config_file='/home/timelapse/config/config.json'; username=$(jq -r .rpi.username $config_file); script_path=$(jq -r .rpi.path $config_file); work_dir=$(jq -r .rpi.work_dir $config_file); . /home/gopro_env/bin/activate && python $script_path"
 
 Restart=on-failure
 RestartSec=60

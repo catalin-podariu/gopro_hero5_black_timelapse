@@ -12,7 +12,7 @@ class GptlConfig:
         with open(config_path, "r") as f:
             self.config = json.load(f)
 
-        self.wifi_config = self.config["wifi"]
+        self.router_config = self.config["router"]
         self.gopro_config = self.config["gopro"]
         self.debug_level = self.config["debug_level"]
         self.push_config = self.config["pushbullet"]
@@ -32,7 +32,7 @@ class GptlConfig:
                 new_config = json.load(f)
 
             # Update everything you need
-            self.wifi_config = new_config["wifi"]
+            self.router_config = new_config["router"]
             self.gopro_config = new_config["gopro"]
             self.debug_level = new_config["debug_level"]
             self.push_config = new_config["pushbullet"]

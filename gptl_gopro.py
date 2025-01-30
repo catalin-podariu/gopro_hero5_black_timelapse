@@ -11,7 +11,7 @@ class GptlGopro:
     def __init__(self, gopro_config):
         self.gopro_config = gopro_config
         self.photo_capture_error_counter = 0
-        self.wifi = GptlWifi(self.gopro_config["wifi"], self.gopro_config)
+        self.wifi = GptlWifi(self.gopro_config["router"], self.gopro_config)
 
     def take_photo(self):
         try:
@@ -20,7 +20,7 @@ class GptlGopro:
             time.sleep(2)
 
             # Connect to camera
-            GptlWifi.check_network_reachable(self.gopro_config["ip"])
+            self.wifi.check_network_reachable(self.gopro_config["ip"])
             logger.info("Connecting to GoPro camera..")
 
             gopro = GoProCamera.GoPro(self.gopro_config["ip"])
@@ -44,6 +44,9 @@ class GptlGopro:
             self.photo_capture_error_counter += 1
             raise e
 
-    # todo: implement this method at some point
+    # todo: implement these at some point
     def take_video(self):
+        pass
+
+    def start_beeper(self):
         pass
