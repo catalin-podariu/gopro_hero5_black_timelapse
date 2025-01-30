@@ -6,7 +6,6 @@ from gptl_logger import logger
 
 
 class GptlConfig:
-
     def __init__(self, config_path="config/config.json"):
         self.config_path = config_path
         with open(config_path, "r") as f:

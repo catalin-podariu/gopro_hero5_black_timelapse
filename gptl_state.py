@@ -6,8 +6,8 @@ import datetime
 from gptl_logger import logger
 from gptl_util import fromisoformat_fallback
 
-class GptlState:
 
+class GptlState:
     def __init__(self, config_path="config/config.json"):
         self.config_path = config_path
         with open(config_path, "r") as f:

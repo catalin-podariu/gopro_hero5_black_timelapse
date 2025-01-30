@@ -10,8 +10,8 @@ import base64
 from goprocam import GoProCamera, constants
 from gptl_logger import logger
 
-class GptlWifi:
 
+class GptlWifi:
     def __init__(self, wifi_config, gopro_config):
         self.wifi_config = wifi_config
         self.gopro_config = gopro_config
