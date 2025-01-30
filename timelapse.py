@@ -28,15 +28,12 @@ class TimelapseController:
         self.push_config = self.config["pushbullet"]
         self.photo_timer = self.config["photo_timer"]["minutes"]
         self.keep_alive_timer = self.config["keep_alive"]["minutes"]
-        self.debug_level = None
 
         self.is_send_20_min_alert = False
         self.last_offline_alert_time = None
         self.last_photo_minute = None
         self.execution_start_time = datetime.datetime.now()
 
-        self.wifi_retry_counter = 0
-        self.reach_for_help_counter = 0
         self.photo_capture_error_counter = 0
         self.error_retries_counter = 0
 
@@ -107,7 +104,6 @@ class TimelapseController:
         if not self.ensure_wifi_connected(gopro_ssid):
             # If we can’t connect to GoPro Wi-Fi, error out
             logger.error(f"Failed to connect to GoPro Wi-Fi. We are in [{self.state}].")
-            # self.state = "ERROR"
             return
 
         try:
@@ -126,6 +122,9 @@ class TimelapseController:
         then switch back to GoPro Wi-Fi to keep it alive. Return to WAITING when done.
         """
         router_ssid = self.wifi_config["ssid"]
+        now = datetime.datetime.now()
+        minute = now.minute
+        second = now.second
 
         if not self.ensure_wifi_connected(router_ssid):
             logger.error(f"Failed to connect to {router_ssid}. ERROR.")
@@ -133,7 +132,10 @@ class TimelapseController:
             return
 
         self.sync_time()
-        self.send_status()
+        # after a while, add hour here as well. One update per day is enough.
+        # now is sending one update every hour
+        if (minute == 51 and second > 20) or (minute == 52 and second < 30):
+            self.send_status()
         self.save_state()
 
         gopro_ssid = self.gopro_config["ssid"]
@@ -160,7 +162,6 @@ class TimelapseController:
             self.state = "OFFLINE_ALERT"
         else:
             logger.error("Exceeded max error retries. Considering a forced reboot or state reset.")
-            # subprocess.run(["sudo", "reboot"]) TODO do this if from the first error didn't pass more than 4..5 minutes
             # if more than 5 minutes passed.. there is a good chance GoPro is off, so we can't recover.
             self.state = "WAITING"
             self.error_retries_counter = 0
@@ -207,9 +208,7 @@ class TimelapseController:
                         self.is_send_20_min_alert = True
                         self.last_offline_alert_time = now
         else:
-            # Router is offline too, or we can't connect.
             self.restart_wifi()
-            # if no change, a rpi reboot would be an idea as well. But may not fix anything if gopro wifi is down.
             logger.warning("Router is offline as well; can't send notification. Remain in OFFLINE_ALERT.")
 
     # ------------------------------------------------------------------
@@ -285,10 +284,9 @@ class TimelapseController:
             logger.warning("Cannot keep alive because we can't connect to GoPro Wi-Fi.")
             return  # We’re probably in OFFLINE_ALERT or ERROR now
 
-        # Send WOL every 9 minutes
         if send_wol:
             self.send_wol()
-            time.sleep(3)  # short sleep to let the packet do its thing
+            time.sleep(3)  # short sleep to let the packet settle
             self.send_wol()
 
             if not self.check_network_reachable(self.gopro_config["ip"]):
@@ -348,7 +346,6 @@ class TimelapseController:
             raise e
 
     def send_status(self):
-        # logger.error(f"[STATUS] {title}: {message}")
         url = "https://api.pushbullet.com/v2/pushes"
         headers = {
             "Access-Token": self.push_config["api_key"],
@@ -424,7 +421,6 @@ class TimelapseController:
                 mac_bytes = bytes.fromhex(mac_address.replace(':', ''))
                 magic_packet = b'\xff' * 6 + mac_bytes * 16
 
-                # Send the magic packet to the broadcast address
                 with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
                     sock.settimeout(3)
                     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -447,7 +443,6 @@ class TimelapseController:
             # Update everything you need
             self.wifi_config = new_config["wifi"]
             self.gopro_config = new_config["gopro"]
-            self.debug_level = new_config["debug_level"]
             self.push_config = new_config["pushbullet"]
             self.photo_timer = new_config["photo_timer"]["minutes"]
             self.keep_alive_timer = new_config["keep_alive"]["minutes"]
@@ -480,7 +475,6 @@ class TimelapseController:
             "last_photo_minute": self.last_photo_minute if self.last_photo_minute else None,
             "last_offline_alert_time": self.fromisoformat_fallback(self.last_offline_alert_time.isoformat()) if self.last_offline_alert_time else None,
             "photo_capture_error_counter": self.photo_capture_error_counter if self.photo_capture_error_counter else 0,
-            "reach_for_help_counter": self.reach_for_help_counter if self.reach_for_help_counter else 0,
             "error_retries": self.error_retries_counter if self.error_retries_counter else 0,
             "max_error_retries": self.max_error_retries if self.max_error_retries else 5,
             "execution_time_seconds": (datetime.datetime.now() - self.execution_start_time).total_seconds(),
