@@ -59,14 +59,14 @@ wakes up the camera, takes a photo, then we transition to `SEND_UPDATE`.
 
 ### **Sending updates**
 Once a photo is taken, the script switches to your router wifi (`SEND_UPDATE`), synchronizes the system time, and sends 
-a status push to PushBullet, then it saves the state and then switches back to the GoPro wifi (`WAITING`). 
+a status push to user, saves the state and then switches back to the GoPro wifi (`WAITING`) to keep it alive. 
 
 ### **Error handling**
-If there is a file missing, or we get (mostly) any other error, the script doesn't fail. BUT! If we can't connect to the
-GoPro wifi.. which is the most important thing, the script goes to `ERROR` where retries a few times, and if it is still 
-failing.. it goes into `OFFLINE_ALERT`. This means it sends push notifications every twenty minutes, until connectivity 
-is restored. But this means user intervention is needed. Unfortunately, the GoPro can't be 'restarted'. Or, not in any 
-way I tried so far. *So, if you're going to use this script, you need to be aware of this!*
+If there is a file missing, we can't sync the time.. or we get (mostly) any other error, the script doesn't fail. BUT! 
+If we can't connect to the GoPro wifi.. which is the most important thing, the script goes to `ERROR` where retries a 
+few times, and if it is still failing.. it goes into `OFFLINE_ALERT`. This means it sends push notifications every twenty 
+minutes, until connectivity is restored. But this needs user intervention. Unfortunately, the GoPro can't be 'restarted'. 
+Or, I couldn't find a way to do this. <br>*So, if you're going to use this script, you need to be aware of this!*
 
 ### **systemd**
 A systemd unit file `timelapse.service` runs this script at boot. Beware of permissions and all that.
@@ -80,13 +80,25 @@ will restart the service if it's not writing in the logs for more than 40 second
 The rpi is isolated most of the time, from the outside world. That's why we sync the time and we send push notifications
 once an hour. This is to make sure the rpi is still alive and kicking. If we need to change the behavior remotely, we can
 create an AWS server that can be checked every time we 'surface' and if so, we download and replace the new config.
-Unless you keep the setup in a remote location.. this is not needed. But it's an idea. This would be nice if you also add
-video capabilities and you want it to take a video when you're not around. Depends on the use case.
+Unless you keep the setup in a remote location.. or need to vary the time, this is not needed. But it's an idea. 
+This would be nice if you also add video capabilities and you want it to take a video when you're not around.
+<br>
+<br>
+But, if you *do have* an use-case where you have to mess with the config remotely, then you can move some of those values in 
+the `keep_alive` array, to the `photo_timer` array. Keep track of these and make sure the downtime is not too long! Some 
+testing needs to be done, but it should work without any other changes. The thing is.. the GoPro will go to sleep after a 
+few minutes of inactivity. Even if you leave it turned on. I kept saying this.. you need to keep the wifi alive. 
+If you tick the box in the Quick App, that says it'll never go to sleep.. it won't, but the wifi will. And you can't wake 
+it up remotely. So.. just keep the wifi alive. 
+Right. I'll stop now.
 
 ### Specs
+Check the specs folder to see how one-hour cycle looks like.
+<br> Don't try to get a count of the photos. It'll get stuck. Randomly. I've removed that part.
+<br> Passwords are base64 encoded. There's a script that does this for you. Use it. Don't keep pwds in plin text. Not cool.
+<br>
+<br>
 
-These are the keep alive times. `[0, 3, 6, 9, 15, 18, 21, 24, 27, 30, 36, 39, 42, 45, 48, 54, 57]`. Try not to mess with this.
-There's some other utils. Use them as you see fit. They're still work in progress.
 
 Enjoy! :)
 
