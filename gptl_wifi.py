@@ -5,6 +5,7 @@
 import time
 import subprocess
 import socket
+import base64
 
 from goprocam import GoProCamera, constants
 from gptl_logger import logger
@@ -121,9 +122,9 @@ class GptlWifi:
 
     def _determine_wifi_password(self, ssid):
         if ssid == self.gopro_config["ssid"]:
-            return self.gopro_config["pwd"]
+            return base64.b64decode(self.gopro_config["pwd"]).decode("utf-8")
         else:
-            return self.wifi_config["pwd"]
+            return base64.b64decode(self.wifi_config["pwd"]).decode("utf-8")
 
     def restart_wifi(self):
         logger.info("Restarting Wi-Fi interface..")
