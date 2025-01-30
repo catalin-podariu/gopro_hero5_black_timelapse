@@ -1,8 +1,9 @@
 #!/bin/bash
 
-REMOTE_USER="mrbigheart"
-REMOTE_HOST="some_ip_here"
-REMOTE_DIR="/home/timelapse/"
+config_file='/Users/mrbigheart/timelapse/config/config.json';
+REMOTE_USER=$(jq -r .rpi.username $config_file);
+REMOTE_HOST=$(jq -r .rpi.ip $config_file);
+REMOTE_DIR=$(jq -r .rpi.work_dir $config_file);
 
 if [ -z "$1" ] || [ -z "$2" ]; then
     echo "Gimme some parameters first.. $0 <file_pattern> <download|deploy>"
