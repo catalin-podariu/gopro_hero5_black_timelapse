@@ -3,7 +3,7 @@
 
 
 
-																		   -=  GoPro Time-lapse full cycle  =-
+																		 -=  GoPro time-lapse one hour cycle  =-
 
 ==============================================================================================================================================================================================
 |		 keep__alive  keep__alive		       keep__alive       keep__alive       keep__alive                keep__alive       keep__alive       keep__alive     keep__alive  keep__alive   | 
