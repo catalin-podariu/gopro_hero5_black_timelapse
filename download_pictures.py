@@ -9,6 +9,13 @@ import json
 from goprocam import GoProCamera, constants
 from logger import logger
 
+# This is using the GoPro API to download photos from a GoPro camera.
+# The GoPro camera must be connected to the same network as the computer running this script.
+# The script will connect to the GoPro camera and download all photos to a specified directory.
+# The script will read the config.json file to get the GoPro IP address, SSID, and password.
+
+# author: mrbigheart
+
 def load_config(config_path="config.json"):
     try:
         with open(config_path, "r") as f:
@@ -25,8 +32,6 @@ gopro_ip = gopro_config["ip"]
 
 
 def main(dir="~/workspace/personal/code/gopro_downloads"):
-
-    # Connect to GoPro
     gopro = GoProCamera.GoPro(gopro_ip)
     logger.info("Connected to GoPro. Fetching media list...")
 
@@ -36,7 +41,6 @@ def main(dir="~/workspace/personal/code/gopro_downloads"):
             logger.info("No media found on GoPro, or could not retrieve list.")
             return
 
-        # media_list is typically a list of tuples: [ (folder, filename), ... ]
         photos = []
         for item in media_list:
             folder, filename = item[0], item[1]
@@ -45,7 +49,6 @@ def main(dir="~/workspace/personal/code/gopro_downloads"):
 
         logger.info(f"Found {len(photos)} photos to download.")
 
-        # Download in batches of 10
         batch_size = 10
         for i in range(0, len(photos), batch_size):
             batch = photos[i : i + batch_size]
@@ -64,22 +67,6 @@ def main(dir="~/workspace/personal/code/gopro_downloads"):
     except Exception as e:
         logger.error(f"Failed to list or download media: {e}")
 
-def send_wol(self):
-    mac_address = self.gopro_config["mac"]
-    try:
-        if len(mac_address) == 17 and mac_address.count(':') == 5:
-            mac_bytes = bytes.fromhex(mac_address.replace(':', ''))
-            magic_packet = b'\xff' * 6 + mac_bytes * 16
-
-            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-                sock.settimeout(3)
-                sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-                sock.sendto(magic_packet, ('<broadcast>', 9))
-            logger.info(f"Magic packet sent to {mac_address}")
-        else:
-            logger.info("Invalid MAC address format")
-    except Exception as e:
-        logger.error(f"Error sending WOL packet: {e}")
 
 if __name__ == "__main__":
     main()
