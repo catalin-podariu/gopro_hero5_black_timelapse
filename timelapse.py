@@ -29,7 +29,7 @@ class TimelapseController:
         self.photo_timer = self.config["photo_timer"]["minutes"]
         self.keep_alive_timer = self.config["keep_alive"]["minutes"]
 
-        self.is_send_20_min_alert = False
+        self.sending_alert_every_20_min = False
         self.last_offline_alert_time = None
         self.last_photo_minute = None
         self.execution_start_time = datetime.datetime.now()
@@ -37,7 +37,7 @@ class TimelapseController:
         self.photo_capture_error_counter = 0
         self.error_retries_counter = 0
 
-        self.restart_counter = -1 # because it will be incremented before the first photo
+        self.restart_counter = -1 # it will be incremented before the main loop
         self.max_error_retries = 5
 
         signal.signal(signal.SIGINT, self.handle_sigint)
@@ -46,6 +46,7 @@ class TimelapseController:
     # ------------------------------------------------------------------
 
     def main_cycle(self):
+        self.load_state()
         logger.logo()
 
         """
@@ -100,6 +101,10 @@ class TimelapseController:
             self.keep_alive(False)
 
     def handle_take_photo_state(self):
+        now = datetime.datetime.now()
+        minute = now.minute
+        second = now.second
+
         gopro_ssid = self.gopro_config["ssid"]
         if not self.ensure_wifi_connected(gopro_ssid):
             # If we can’t connect to GoPro Wi-Fi, error out
@@ -109,12 +114,15 @@ class TimelapseController:
         try:
             self.take_photo()
             self.last_photo_minute = datetime.datetime.now().minute
-
-            self.state = "SEND_UPDATE"
         except Exception as e:
             logger.error(f"Error taking photo: {e}. Check logs for more info.")
             self.photo_capture_error_counter += 1
             self.state = "ERROR"
+
+        if (minute == 51 and second > 20) or (minute == 52 and second < 30):
+            self.state = "SEND_UPDATE"
+        else:
+            self.state = "WAITING"
 
     def handle_send_update_state(self):
         """
@@ -122,9 +130,6 @@ class TimelapseController:
         then switch back to GoPro Wi-Fi to keep it alive. Return to WAITING when done.
         """
         router_ssid = self.wifi_config["ssid"]
-        now = datetime.datetime.now()
-        minute = now.minute
-        second = now.second
 
         if not self.ensure_wifi_connected(router_ssid):
             logger.error(f"Failed to connect to {router_ssid}. ERROR.")
@@ -132,10 +137,6 @@ class TimelapseController:
             return
 
         self.sync_time()
-        # after a while, add hour here as well. One update per day is enough.
-        # now is sending one update every hour
-        if (minute == 51 and second > 20) or (minute == 52 and second < 30):
-            self.send_status()
         self.save_state()
 
         gopro_ssid = self.gopro_config["ssid"]
@@ -158,11 +159,12 @@ class TimelapseController:
             logger.info("Will attempt to recover by returning to WAITING.")
             self.state = "WAITING"
         elif self.photo_capture_error_counter > 3:
-            logger.error("Too many photo capture errors. Will attempt to recover by returning to WAITING.")
+            logger.error(f"Too many photo capture errors {self.photo_capture_error_counter}. Will attempt to recover by returning to WAITING.")
             self.state = "OFFLINE_ALERT"
         else:
             logger.error("Exceeded max error retries. Considering a forced reboot or state reset.")
             # if more than 5 minutes passed.. there is a good chance GoPro is off, so we can't recover.
+            # todo: add a check to see if GoPro is reachable before rebooting
             self.state = "WAITING"
             self.error_retries_counter = 0
 
@@ -197,7 +199,7 @@ class TimelapseController:
                     )
                     self.last_offline_alert_time = now
                 else:
-                    if not self.is_send_20_min_alert:
+                    if not self.sending_alert_every_20_min:
                         # Send an immediate, one-time alert
                         self.send_notification(
                             "GoPro OFFLINE!",
@@ -205,7 +207,7 @@ class TimelapseController:
                         )
                         # The assumption is we can't recover from this, so we set this flag True.
                         # It will keep sending the 20-min alert until user intervention.
-                        self.is_send_20_min_alert = True
+                        self.sending_alert_every_20_min = True
                         self.last_offline_alert_time = now
         else:
             self.restart_wifi()
@@ -221,10 +223,9 @@ class TimelapseController:
 
         logger.info(f"Connecting to Wi-Fi: {ssid}")
         if not self.switch_wifi(ssid):
-            logger.error(f"Could not connect to {ssid} ->  We are in [{self.state}].")
             self.state = "OFFLINE_ALERT"
+            logger.error(f"Could not connect to {ssid} ->  We are in [{self.state}].")
             return False
-
         return True
 
     def get_current_wifi(self):
@@ -316,7 +317,7 @@ class TimelapseController:
 
     def take_photo(self):
         try:
-            logger.info("Waking up the GoPro with Magic package.")
+            logger.info("Waking up the GoPro with magic package.")
             self.send_wol()
             time.sleep(2)
 
@@ -375,7 +376,7 @@ class TimelapseController:
             "Access-Token": self.push_config["api_key"],
             "Content-Type": "application/json"
         }
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         data = {
             "type": "note",
             "title": f"[ALERT] {title}",
@@ -454,15 +455,26 @@ class TimelapseController:
             logger.error(f"Failed to reload config: {e}")
 
     def load_state(self):
+        logger.info(f"Loading state. This only happens after a reboot. Current state is [{self.state}]")
         try:
             with open(self.state_path, "r") as f:
-                state_data = json.load(f)
+                loaded_state = json.load(f)
 
             # Convert string timestamps back to datetime objects
             for key in ["last_photo_minute", "last_offline_alert_time"]:
-                if key in state_data:
-                    state_data[key] = self.fromisoformat_fallback(state_data[key])
-            return state_data
+                if key in loaded_state:
+                    loaded_state[key] = self.fromisoformat_fallback(loaded_state[key])
+
+            self.last_photo_minute = loaded_state.get("last_photo_minute")
+            self.last_offline_alert_time = loaded_state.get("last_offline_alert_time")
+            self.photo_capture_error_counter = loaded_state.get("photo_capture_error_counter", 0)
+            self.error_retries_counter = loaded_state.get("error_retries", 0)
+            self.max_error_retries = loaded_state.get("max_error_retries", 5)
+            self.restart_counter = loaded_state.get("restart_counter", -1)
+            self.sending_alert_every_20_min = loaded_state.get("sending_alert_every_20_min", False)
+
+            logger.info("New stat is loaded and all saved variables are rehydrated.")
+            return loaded_state
         except FileNotFoundError as e:
             logger.error(f"Error loading state file: {e}")
             return {}
@@ -478,7 +490,8 @@ class TimelapseController:
             "error_retries": self.error_retries_counter if self.error_retries_counter else 0,
             "max_error_retries": self.max_error_retries if self.max_error_retries else 5,
             "execution_time_seconds": (datetime.datetime.now() - self.execution_start_time).total_seconds(),
-            "restart_counter": self.restart_counter if self.restart_counter else 0,
+            "restart_counter": self.restart_counter,
+            "sending_alert_every_20_min": self.sending_alert_every_20_min
         }
         try:
             with open(self.state_path, "w") as f:
@@ -488,7 +501,11 @@ class TimelapseController:
             logger.error(f"Failed to save state: {e}")
 
     def fromisoformat_fallback(self, iso_string):  # Python 3.6 compatibility
-        return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S")
+        try:
+            return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S.%f")  # Supports microseconds
+        except ValueError:
+            return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S")  # Fallback if no microseconds
+
 
     def rpi_temp(self):
         try:
