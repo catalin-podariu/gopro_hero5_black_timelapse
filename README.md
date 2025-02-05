@@ -58,8 +58,10 @@ When it's time to take a photo, the script transitions to `TAKE_PHOTO`. If the r
 wakes up the camera, takes a photo, then we transition to `SEND_UPDATE`.
 
 ### **Sending updates**
-Once a photo is taken, the script switches to your router wifi (`SEND_UPDATE`), synchronizes the system time, and sends 
-a status push to user, saves the state and then switches back to the GoPro wifi (`WAITING`) to keep it alive. 
+Once a photo is taken, depending on the time, script switches to your router wifi (`SEND_UPDATE`), synchronizes the system 
+time and sends a status push to user (the time sync and the user notification happen once every hour), saves the state 
+and then switches back to the GoPro wifi (`WAITING`) to keep it alive. So also the wifi switch to the main router happens 
+every hour. 
 
 ### **Error handling**
 If there is a file missing, we can't sync the time.. or we get (mostly) any other error, the script doesn't fail. BUT! 
@@ -95,7 +97,8 @@ Right. I'll stop now.
 ### Specs
 Check the specs folder to see how one-hour cycle looks like.
 <br> Don't try to get a count of the photos. It'll get stuck. Randomly. I've removed that part.
-<br> Passwords are base64 encoded. There's a script that does this for you. Use it. Don't keep pwds in plin text. Not cool.
+<br> Passwords are base64 encoded. There's a script that does this for you. Use it. Don't keep passwords in plain text. 
+Not cool.
 <br>
 <br>
 

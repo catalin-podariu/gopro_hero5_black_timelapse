@@ -7,6 +7,8 @@ import socket
 import subprocess
 import sys
 import time
+import base64
+
 from goprocam import GoProCamera, constants
 
 from logger import logger
@@ -210,7 +212,7 @@ class TimelapseController:
                         self.sending_alert_every_20_min = True
                         self.last_offline_alert_time = now
         else:
-            self.restart_wifi()
+            # self.restart_wifi()
             logger.warning("Router is offline as well; can't send notification. Remain in OFFLINE_ALERT.")
 
     # ------------------------------------------------------------------
@@ -230,7 +232,7 @@ class TimelapseController:
 
     def get_current_wifi(self):
         try:
-            result = subprocess.run(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
+            result = subprocess.run(["sudo", "nmcli", "-t", "-f", "active,ssid", "dev", "wifi"],
                                     capture_output=True, text=True)
             if result.returncode == 0:
                 for line in result.stdout.splitlines():
@@ -247,14 +249,15 @@ class TimelapseController:
         for attempt in range(max_tries):
             logger.info(f"Trying to connect to {target_ssid}, attempt {attempt + 1}/{max_tries}")
             try:
-                cmd = f"nmcli dev wifi connect '{target_ssid}' password '{pwd}'"
+                cmd = f"sudo nmcli dev wifi connect '{target_ssid}' password '{pwd}'"
                 subprocess.run(cmd, shell=True, check=True)
                 time.sleep(5)  # wait for wifi to settle
                 if (self.get_current_wifi() or "").lower() == target_ssid.lower():
                     logger.info(f"Connected to {target_ssid} successfully.")
                     return True
             except subprocess.CalledProcessError as e:
-                logger.warning(f"nmcli connect attempt failed. SSID not found or password is incorrect. Message x")
+                logger.warning(f"sudo nmcli connect attempt failed. SSID not found or password is incorrect. Message: {e}")
+                logger.debug(f"ssid: {target_ssid}, pwd: {pwd}")
                 time.sleep(3)
 
         logger.error(f"Failed to connect to {target_ssid} after {max_tries} tries.")
@@ -262,9 +265,9 @@ class TimelapseController:
 
     def _determine_wifi_password(self, ssid):
         if ssid == self.gopro_config["ssid"]:
-            return self.gopro_config["pwd"]
+            return base64.b64decode(self.gopro_config["pwd"]).decode("utf-8")
         else:
-            return self.wifi_config["pwd"]
+            return base64.b64decode(self.wifi_config["pwd"]).decode("utf-8")
 
     def restart_wifi(self):
         logger.info("Restarting Wi-Fi interface..")
@@ -312,7 +315,6 @@ class TimelapseController:
             except Exception as e:
                 logger.error(f"Error powering off GoPro in keep_alive: {e}")
                 return
-
         logger.info("keep_alive sequence completed.")
 
     def take_photo(self):
@@ -410,7 +412,8 @@ class TimelapseController:
                 return True
             except subprocess.CalledProcessError:
                 logger.warning(f"Ping to {ip} failed. Attempt {attempt + 1}/{retries}.")
-                self.restart_wifi()
+                if attempt == 5:
+                    self.restart_wifi()
                 time.sleep(delay)
         logger.error(f"Network not reachable after {retries} attempts.")
         return False

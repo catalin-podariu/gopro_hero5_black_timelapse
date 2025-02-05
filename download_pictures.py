@@ -26,8 +26,6 @@ def load_config(config_path="config.json"):
 
 config = load_config()
 gopro_config = config["gopro"]
-ssid = gopro_config["ssid"]
-pwd = gopro_config["pwd"]
 gopro_ip = gopro_config["ip"]
 
 
