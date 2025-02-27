@@ -139,6 +139,7 @@ class TimelapseController:
             return
 
         self.sync_time()
+        self.send_status()
         self.save_state()
 
         gopro_ssid = self.gopro_config["ssid"]
