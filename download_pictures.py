@@ -10,9 +10,9 @@ from goprocam import GoProCamera, constants
 from logger import logger
 
 # This is using the GoPro API to download photos from a GoPro camera.
-# The GoPro camera must be connected to the same network as the computer running this script.
-# The script will connect to the GoPro camera and download all photos to a specified directory.
-# The script will read the config.json file to get the GoPro IP address, SSID, and password.
+# The laptop must be connected to the GoPro camera's WiFi network. Then, run the script
+# The script will read the config.json file to get the GoPro IP address and password.
+# Make sure you change the working directory in the config.json and the path here, to the directory where you want to save the photos.
 
 # author: mrbigheart
 
@@ -29,7 +29,7 @@ gopro_config = config["gopro"]
 gopro_ip = gopro_config["ip"]
 
 
-def main(dir="/Users/mrbigheart/workspace/personal/code/gopro_downloads/media"):
+def main(dir="/Users/mrbigheart/gopro_downloads/media"):
     gopro = GoProCamera.GoPro(gopro_ip)
     logger.info("Connected to GoPro. Fetching media list...")
 
