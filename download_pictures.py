@@ -29,9 +29,26 @@ gopro_config = config["gopro"]
 gopro_ip = gopro_config["ip"]
 
 
-def main(dir="~/workspace/personal/code/gopro_downloads"):
+def main(dir="/Users/mrbigheart/workspace/personal/code/gopro_downloads/media"):
     gopro = GoProCamera.GoPro(gopro_ip)
     logger.info("Connected to GoPro. Fetching media list...")
+
+    # ----------------------------------------------------------------------
+    # NEW: Build a set of the existing local photos to skip them up front.
+    # ----------------------------------------------------------------------
+    try:
+        local_photos = {
+            f.lower()
+            for f in os.listdir(dir)
+            if f.lower().endswith((".jpg", ".jpeg"))
+        }
+    except FileNotFoundError:
+        # If the directory doesn't exist, create it so we can download
+        os.makedirs(dir, exist_ok=True)
+        local_photos = set()
+
+    logger.info(f"Found {len(local_photos)} photos locally. Will skip these if present on camera.")
+    # ----------------------------------------------------------------------
 
     try:
         media_list = gopro.listMedia(format=True, media_array=True)
@@ -42,10 +59,16 @@ def main(dir="~/workspace/personal/code/gopro_downloads"):
         photos = []
         for item in media_list:
             folder, filename = item[0], item[1]
+            # only pick up .jpg / .jpeg
             if filename.lower().endswith((".jpg", ".jpeg")):
-                photos.append((folder, filename))
+                # ----------------------------------------------------------------------
+                # Skip adding to the download list if we already have it locally
+                # ----------------------------------------------------------------------
+                if filename.lower() not in local_photos:
+                    photos.append((folder, filename))
+                # ----------------------------------------------------------------------
 
-        logger.info(f"Found {len(photos)} photos to download.")
+        logger.info(f"Found {len(photos)} new photos to download.")
 
         batch_size = 10
         for i in range(0, len(photos), batch_size):
