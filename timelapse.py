@@ -180,41 +180,57 @@ class TimelapseController:
         - Then send repeated notifications every 20 minutes if it remains offline (and there's internet).
         """
         router_ssid = self.wifi_config["ssid"]
+        gopro_ssid = self.gopro_config["ssid"]
         now = datetime.datetime.now()
 
+        # Make sure the attribute exists
         if not hasattr(self, "last_offline_alert_time"):
-            self.last_offline_alert_time = now - datetime.timedelta(hours=1)
+            # For a new session, pretend we started “offline” a while back
+            # so we can send an alert quickly if needed
+            self.last_offline_alert_time = now - datetime.timedelta(minutes=30)
 
-        # Attempt to connect to router
-        if self.ensure_wifi_connected(router_ssid):
-            self.last_offline_alert_time = now
+        router_is_up = self.ensure_wifi_connected(router_ssid)
+        gopro_is_up = False
 
-            gopro_ssid = self.gopro_config["ssid"]
-            if self.ensure_wifi_connected(gopro_ssid):
-                logger.info("Router AND GoPro reconnected. Returning to WAITING.")
-                self.state = "WAITING"
-            else:
-                time_since_last_offline_alert = now - self.last_offline_alert_time
-                if time_since_last_offline_alert.total_seconds() >= 1200:  # 20 minutes
-                    self.send_notification(
-                        "GoPro OFFLINE!",
-                        "\nSTILL CAN NOT connect to GoPro. [20 min repeat] Sent at "
-                    )
-                    self.last_offline_alert_time = now
-                else:
-                    if not self.sending_alert_every_20_min:
-                        # Send an immediate, one-time alert
-                        self.send_notification(
-                            "GoPro OFFLINE!",
-                            "\nFirst-time alert: I CAN NOT connect to GoPro. Sent at "
-                        )
-                        # The assumption is we can't recover from this, so we set this flag True.
-                        # It will keep sending the 20-min alert until user intervention.
-                        self.sending_alert_every_20_min = True
-                        self.last_offline_alert_time = now
+        if router_is_up:
+            gopro_is_up = self.ensure_wifi_connected(gopro_ssid)
+
+        if router_is_up and gopro_is_up:
+            # Fully online: reset everything
+            logger.info("Router AND GoPro reconnected. Returning to WAITING.")
+            self.state = "WAITING"
+            self.last_offline_alert_time = None  # or set to now, your choice
+            self.sending_alert_every_20_min = False
         else:
-            # self.restart_wifi()
-            logger.warning("Router is offline as well; can't send notification. Remain in OFFLINE_ALERT.")
+            # Either router is down, or GoPro is down (or both)
+            if not self.last_offline_alert_time:
+                self.last_offline_alert_time = now
+
+            time_since_last_offline = now - self.last_offline_alert_time
+
+            # If the router is offline, you might restart or do something else here...
+            if not router_is_up:
+                logger.warning("Router is offline, remain in OFFLINE_ALERT.")
+                # self.restart_wifi()
+                # Possibly bail out early, since we can’t reach the GoPro if router is off
+                return
+
+            # Otherwise, router is up but GoPro is offline
+            if time_since_last_offline.total_seconds() >= 1200:  # 20-minute repeat
+                self.send_notification(
+                    title="GoPro OFFLINE!",
+                    message="STILL cannot connect to GoPro. [20 min repeat]. Sent at ..."
+                )
+                self.last_offline_alert_time = now
+            else:
+                # If we haven't started the repeating cycle, send that immediate “first offline” alert
+                if not self.sending_alert_every_20_min:
+                    self.send_notification(
+                        title="GoPro OFFLINE!",
+                        message="I cannot connect to GoPro. Sending first-time alert at ..."
+                    )
+                    self.sending_alert_every_20_min = True
+                    self.last_offline_alert_time = now
 
     # ------------------------------------------------------------------
 
@@ -430,7 +446,7 @@ class TimelapseController:
                     sock.settimeout(3)
                     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
                     sock.sendto(magic_packet, ('<broadcast>', 9))
-                logger.info(f"Magic packet sent to {mac_address}")
+                logger.info(f"WOL Magic packet sent to {mac_address}")
             else:
                 logger.info("Invalid MAC address format")
         except Exception as e:
