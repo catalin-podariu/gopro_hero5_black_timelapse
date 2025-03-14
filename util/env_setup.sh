@@ -18,6 +18,9 @@ echo "==== Updating apt-get and upgrading existing packages ===="
 sudo apt-get update
 sudo apt-get upgrade -y
 
+echo "==== Installing I2C packages ===="
+sudo apt-get install -y i2c-tools
+
 echo "==== Installing Python 3 and pip ===="
 sudo apt-get install -y python3 python3-pip python3-venv
 
@@ -44,15 +47,13 @@ sudo -u "$SVC_USER" python3 -m venv "$GOPRO_ENV"
 echo "==== Activating the venv and installing packages inside it ===="
 sudo -u "$SVC_USER" bash -c "
     source $GOPRO_ENV/bin/activate
-    pip install --upgrade pip
-    pip install goprocam requests pushbullet.py
 "
 
 echo "==== Upgrading pip ===="
-sudo pip3 install --upgrade pip --break-system-packages
+sudo pip3 install --upgrade pip python3-pip python3-pil -y --break-system-packages
 
 echo "==== Installing Python libraries system-wide (optional) ===="
-sudo pip3 install goprocam requests pushbullet.py jq --break-system-packages
+sudo pip3 install goprocam requests pushbullet.py jq adafruit-circuitpython-ssd1306 adafruit-circuitpython-busdevice --break-system-packages
 
 echo "==== Ensuring $TIMELAPSE_DIR exists and is owned by $SVC_USER ===="
 sudo mkdir -p "$TIMELAPSE_DIR"
@@ -60,7 +61,6 @@ sudo chown -R "$SVC_USER:$SVC_USER" "$TIMELAPSE_DIR"
 
 echo "==== Creating systemd service files for timelapse and failure handling ===="
 
-# timelapse.service
 sudo tee /etc/systemd/system/timelapse.service >/dev/null <<EOF
 #!/usr/bin/env bash
 

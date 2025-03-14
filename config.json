@@ -1,0 +1,34 @@
+{
+  "wifi": {
+    "ssid": "ssid_here",
+    "pwd": "c2VjdXJlX3dpZmlfcHdkX2hlcmU="
+  },
+  "gopro": {
+    "mac": "mac_here",
+    "ip": "ip_here",
+    "ssid": "ssid_here",
+    "pwd": "Z29wcm9fcHdk"
+  },
+  "rpi":{
+    "ip": "192.168.1.20",
+    "port": 8080,
+    "path": "/home/timelapse/timelapse.py",
+    "username": "mrbigheart",
+    "ssh_port": 22,
+    "work_dir": "/home/timelapse"
+  },
+  "pushbullet": {
+    "api_key": "o.api_key_here"
+  },
+  "keep_alive": {
+    "minutes": [0, 6, 9, 15, 18, 24, 27, 33, 36, 42, 45, 51, 54]
+  },
+  "photo_timer": {
+    "minutes": [3, 12, 21, 30, 39, 48, 57]
+  },
+  "heartbeat": {
+    "awk_script": "/home/timelapse/heartbeat.awk",
+    "state_file": "/home/timelapse/heartbeat.state"
+  },
+  "logging_path": "/Users/mrbigheart/workspace/personal/code/gopro_downloads/logs"
+}

@@ -6,8 +6,8 @@ import base64
 # AND THEN.. remove the original passwords from here!
 
 def encode_config_pwd():
-    wifi_pwd = (base64.b64encode("[PWD_HERE]".encode("utf-8"))).decode("utf-8")
-    gopro_pwd = (base64.b64encode("[PWD_HERE]".encode("utf-8"))).decode("utf-8")
+    wifi_pwd = base64.b64encode("[PWD_HERE]".encode("utf-8"))
+    gopro_pwd = base64.b64encode("[PWD_HERE]".encode("utf-8"))
 
     print("Encoded passwords")
     print(f"wifi {wifi_pwd}")
