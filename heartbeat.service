@@ -1,0 +1,26 @@
+
+# Make sure to install the following packages:
+
+# this service file should be placed in /etc/systemd/system/heartbeat.service
+# sudo apt-get install -y i2c-tools
+# sudo apt-get install python3-pip python3-pil -y
+# sudo pip3 install adafruit-circuitpython-ssd1306 adafruit-circuitpython-busdevice
+
+[Unit]
+Description=Timelapse Heartbeat Display Script
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/home/timelapse
+ExecStart=/usr/bin/python3 /home/timelapse/heartbeat.py
+
+[Install]
+WantedBy=multi-user.target
+
+
+# crontab -e will open the editor
+# add the following line to the end of the file
+# * * * * * /home/timelapse/heartbeat.py
+# this will run the script every minute (adjust as needed)
