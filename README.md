@@ -107,3 +107,20 @@ Enjoy! :)
 
 P.S. _If you're gonna' whine about the monkey-patch or the ASCII art.. save it!<br>
 I like it._
+
+<br>
+<br>
+<br>
+
+### **March update (~2 months after launch):**<br>
+The script now takes 7 pictures every hour. Just 3.. felt like it's not enough. The sunsets are barely captured.. but also
+the whole point of this was to see the trees bloom. 
+
+Sadly.. the GoPro api is not thaaat reliable. It's not the script. It's the GoPro.  So I have to manually restart the GoPro, 
+turn the wifi on and off and then restart the script, every two weeks. You get notified.. so it's not a big deal. But it's annoying.
+
+Also, I added a tiny OLED (SSD1306) of 128x64 pixels, to show the status of the time-lapse. I find it very useful to be able
+to keep an eye on it, since you can't login to the rpi. On that tiny screen I update an array of symbols, that show
+the status of the script. Each symbol is a different minute. Also a special screen for the `OFFLINE` state. The script
+looks through the logs, with an AWK script, and if it finds the `PHOTO` state, it shows a special symbol, etc.
+
