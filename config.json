@@ -21,12 +21,14 @@
     "api_key": "o.api_key_here"
   },
   "keep_alive": {
-    "minutes": [0, 3, 6, 9, 15, 18, 21, 24, 27, 30, 36, 39, 42, 45, 48, 54, 57]
     "minutes": [0, 6, 9, 15, 18, 24, 27, 33, 36, 42, 45, 51, 54]
   },
   "photo_timer": {
-    "minutes": [12, 33, 51]
     "minutes": [3, 12, 21, 30, 39, 48, 57]
   },
-  "logging_path": "/home/timelapse/logs/"
+  "heartbeat": {
+    "awk_script": "/home/timelapse/heartbeat.awk",
+    "state_file": "/home/timelapse/heartbeat.state"
+  },
+  "logging_path": "/Users/mrbigheart/workspace/personal/code/gopro_downloads/logs"
 }
