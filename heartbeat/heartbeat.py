@@ -20,7 +20,7 @@ import adafruit_ssd1306
 # Also enable I2C on the Pi via sudo raspi-config, then verify your display appears at 0x3C or 0x3D with i2cdetect -y 1.
 # To do that, go to Interfacing Options -> I2C -> Enable I2C
 # --------------------------------------------------------
-with open("config.json", "r") as f:
+with open("../config.json", "r") as f:
     config = json.load(f)
 
 AWK_SCRIPT_PATH = config["heartbeat"]["awk_script"]

@@ -1,0 +1,12 @@
+timelapse/
+├── config.json
+├── state.json
+├── timelapse.py
+├── logger.py
+└── lib/
+    ├── config.py
+    ├── gopro.py
+    ├── logger.py
+    ├── notification.py
+    ├── state_manager.py
+    └── wifi.py

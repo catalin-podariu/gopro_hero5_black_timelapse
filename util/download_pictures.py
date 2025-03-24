@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-import socket
 import sys
 import os
 import time
 import json
 
-from goprocam import GoProCamera, constants
-from logger import logger
+from goprocam import GoProCamera
+from lib.logger import logger
 
 # This is using the GoPro API to download photos from a GoPro camera.
 # The laptop must be connected to the GoPro camera's WiFi network.
@@ -29,7 +28,7 @@ gopro_config = config["gopro"]
 gopro_ip = gopro_config["ip"]
 
 
-def main(dir="/Users/mrbigheart/gopro_downloads/media"):
+def main(dir="/Users/mrbigheart/workspace/personal/code/gopro_downloads/media"):
     gopro = GoProCamera.GoPro(gopro_ip)
     logger.info("Connected to GoPro. Fetching media list...")
 

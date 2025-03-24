@@ -2,6 +2,7 @@
   "wifi": {
     "ssid": "ssid_here",
     "pwd": "c2VjdXJlX3dpZmlfcHdkX2hlcmU="
+  "router": {
   },
   "gopro": {
     "mac": "mac_here",

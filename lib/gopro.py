@@ -2,24 +2,33 @@
 
 import time
 
-from gptl_wifi import GptlWifi
 from goprocam import GoProCamera, constants
-from gptl_logger import logger
+from lib.logger import logger
+from lib.wifi import Wifi
+from lib.config import Config
+from util.download_pictures import gopro_config
 
 
-class GptlGopro:
-    def __init__(self, gopro_config):
-        self.gopro_config = gopro_config
+class GoPro:
+
+    def __init__(self):
+        self.wifi = Wifi()
+        self.config = Config()
+        self.gopro_config = self.config.gopro_config
         self.photo_capture_error_counter = 0
-        self.wifi = GptlWifi(self.gopro_config["router"], self.gopro_config)
+
 
     def take_photo(self):
         try:
-            logger.info("Waking up the GoPro with Magic package.")
+            logger.info("Waking up the GoPro with magic package.")
+            self.wifi.send_wol(self.gopro_config["mac"])
+            time.sleep(3)  # short sleep to let the packet settle
+            self.wifi.send_wol(self.gopro_config["mac"])
 
-            time.sleep(2)
+            if not self.wifi.check_network_reachable(self.gopro_config["ip"]):
+                logger.error("GoPro not reachable even after sending WOL. Possibly off already. But why?!")
+                return
 
-            # Connect to camera
             self.wifi.check_network_reachable(self.gopro_config["ip"])
             logger.info("Connecting to GoPro camera..")
 
@@ -31,7 +40,6 @@ class GptlGopro:
             gopro.mode(constants.Mode.PhotoMode)
             time.sleep(2)
 
-            # Actually taking the photo
             logger.info("Taking photo now..")
             gopro.take_photo()
             time.sleep(5)
@@ -44,7 +52,6 @@ class GptlGopro:
             self.photo_capture_error_counter += 1
             raise e
 
-    # todo: implement these at some point
     def take_video(self):
         pass
 

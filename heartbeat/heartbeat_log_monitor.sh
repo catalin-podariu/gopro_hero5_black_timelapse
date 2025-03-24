@@ -10,15 +10,15 @@
 # sudo systemctl start crontab.service
 
 LOG_DIR="/home/timelapse/logs"
-SERVICE_TO_MONITOR="timelapse.service"
+TIMELAPSE_SERVICE="timelapse.service"
 MAX_INTERVAL=40 # even this is a lot..
 
 # Find the most recent log file matching the pattern
 LOG_FILE=$(find "$LOG_DIR" -type f -name "daily_logs_*" -printf '%T@ %p\n' | sort -n | awk 'END {print $2}')
 
 if [[ -z "$LOG_FILE" ]]; then
-    echo "$(date): No log file found in $LOG_DIR. Restarting $SERVICE_TO_MONITOR."
-    sudo systemctl restart $SERVICE_TO_MONITOR
+    echo "$(date): No log file found in $LOG_DIR. Restarting $TIMELAPSE_SERVICE."
+    sudo systemctl restart $TIMELAPSE_SERVICE
     exit 1
 fi
 
@@ -27,9 +27,11 @@ CURRENT_TIME=$(date +%s)
 AGE=$((CURRENT_TIME - LAST_MODIFIED))
 
 if [[ $AGE -gt $MAX_INTERVAL ]]; then
-    echo "$(date): Log file is stale (age: $AGE seconds, file: $LOG_FILE). Restarting $SERVICE_TO_MONITOR."
-    sudo systemctl restart $SERVICE_TO_MONITOR
+    echo "$(date): Log file is stale (age: $AGE seconds, file: $LOG_FILE). Restarting $TIMELAPSE_SERVICE."
+    sudo systemctl restart $TIMELAPSE_SERVICE
     exit 1
 fi
 
-echo "$(date): Still kickin' age: $AGE seconds for $LOG_FILE)."
+UPTIME=$(sudo uptime -p)
+
+echo "$(date): Still kickin' (age: $AGE seconds for $LOG_FILE). Uptime: $UPTIME"

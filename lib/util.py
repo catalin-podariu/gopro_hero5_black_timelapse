@@ -1,10 +1,9 @@
-#!/usr/bin/env python3
 
-import subprocess
 import datetime
+import subprocess
+from lib.logger import logger
 
-from gptl_logger import logger
-
+# This class is a collection of utility functions that are used in multiple places
 
 def sync_time():
     try:
@@ -17,9 +16,6 @@ def sync_time():
     except Exception as e:
         logger.error(f"Unexpected error in time sync: {e}")
 
-def fromisoformat_fallback(iso_string):  # Python 3.6 compatibility
-    return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S")
-
 def rpi_temp():
     try:
         temp = subprocess.run(["vcgencmd", "measure_temp"], capture_output=True, text=True)
@@ -28,5 +24,13 @@ def rpi_temp():
             return f"NORMAL - {temp_value}" if temp_value < 60.0 else f"HIGH - {temp_value}"
         else:
             return "UNKNOWN"
-    except Exception:
-        return "UNKNOWN"
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Error getting temperature: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error getting temperature: {e}")
+
+def from_iso_format_fallback(iso_string):  # Python 3.6 compatibility
+    try:
+        return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S.%f")
+    except ValueError:
+        return datetime.datetime.strptime(iso_string, "%Y-%m-%dT%H:%M:%S")
