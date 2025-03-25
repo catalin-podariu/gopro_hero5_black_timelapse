@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
-import socket
 import sys
 import os
 import time
 import json
 
-from goprocam import GoProCamera, constants
-from logger import logger
+from goprocam import GoProCamera
+from lib.logger import logger
 
 # This is using the GoPro API to download photos from a GoPro camera.
-# The laptop must be connected to the GoPro camera's WiFi network.
+# The laptop must be connected to the GoPro camera's Wi-Fi network.
 # Then, the script will read the config.json file to get the GoPro IP address and password.
 # Make sure you change the working directory in the config.json and the path here, to the directory where you want to save the photos.
 
@@ -29,7 +28,7 @@ gopro_config = config["gopro"]
 gopro_ip = gopro_config["ip"]
 
 
-def main(dir="/Users/mrbigheart/gopro_downloads/media"):
+def main(working_directory="/Users/mrbigheart/workspace/personal/code/gopro_downloads/media"):
     gopro = GoProCamera.GoPro(gopro_ip)
     logger.info("Connected to GoPro. Fetching media list...")
 
@@ -39,12 +38,12 @@ def main(dir="/Users/mrbigheart/gopro_downloads/media"):
     try:
         local_photos = {
             f.lower()
-            for f in os.listdir(dir)
+            for f in os.listdir(working_directory)
             if f.lower().endswith((".jpg", ".jpeg"))
         }
     except FileNotFoundError:
         # If the directory doesn't exist, create it so we can download
-        os.makedirs(dir, exist_ok=True)
+        os.makedirs(working_directory, exist_ok=True)
         local_photos = set()
 
     logger.info(f"Found {len(local_photos)} photos locally. Will skip these if present on camera.")
@@ -74,15 +73,15 @@ def main(dir="/Users/mrbigheart/gopro_downloads/media"):
         for i in range(0, len(photos), batch_size):
             batch = photos[i : i + batch_size]
             for folder, filename in batch:
-                local_path = os.path.join(dir, filename)
+                local_path = os.path.join(working_directory, filename)
                 if os.path.exists(local_path):
                     logger.info(f"File {filename} already exists locally, skipping.")
                     continue
                 logger.info(f"Downloading {folder}/{filename} -> {local_path}")
                 gopro.downloadMedia(folder, filename, custom_filename=local_path)
-                time.sleep(1)
+                # time.sleep(1)
             logger.info(f"Finished batch {i//batch_size + 1}.")
-            time.sleep(2)  # small pause between batches
+            time.sleep(1)  # small pause between batches
 
         logger.info("All downloads complete.")
     except Exception as e:

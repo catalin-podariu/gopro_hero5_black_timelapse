@@ -1,8 +1,8 @@
 #!/bin/bash
 
-config_file='/Users/mrbigheart/timelapse/config/config.json';
+config_file='/Users/mrbigheart/workspace/personal/code/gopro_hero5_black_timelapse/config.json';
 REMOTE_USER=$(jq -r .rpi.username $config_file);
-REMOTE_HOST=$(jq -r .rpi.ip $config_file);
+REMOTE_HOST=$(jq -r .rpi.ip_lan $config_file);
 REMOTE_DIR=$(jq -r .rpi.work_dir $config_file);
 
 if [ -z "$1" ] || [ -z "$2" ]; then

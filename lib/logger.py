@@ -9,7 +9,7 @@ import time
 import re
 
 
-CONFIG_PATH = "config.json"
+CONFIG_PATH = "../config.json"
 if os.path.exists(CONFIG_PATH):
     with open(CONFIG_PATH, "r") as f:
         config = json.load(f)
