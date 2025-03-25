@@ -121,6 +121,10 @@ turn the wifi on and off and then restart the script, every two weeks. You get n
 
 Also, I added a tiny OLED (SSD1306) of 128x64 pixels, to show the status of the time-lapse. I find it very useful to be able
 to keep an eye on it, since you can't login to the rpi. On that tiny screen I update an array of symbols, that show
-the status of the script. Each symbol is a different minute. Also a special screen for the `OFFLINE` state. The script
+the status of the script. Each symbol is a different minute. Also, a special screen for the `OFFLINE` state. The script
 looks through the logs, with an AWK script, and if it finds the `PHOTO` state, it shows a special symbol, etc.
 
+#### **2nd March update (big refactoring):**<br>
+Timelapse now has a `lib` folder, where all the cool stuff is happening. The main script is now clean and easy to read,
+hopefully. Heartbeat looks for a different keyword to show when a picture is taken, more reliable. 
+Tests will follow. I promise.
