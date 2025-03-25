@@ -124,7 +124,11 @@ to keep an eye on it, since you can't login to the rpi. On that tiny screen I up
 the status of the script. Each symbol is a different minute. Also, a special screen for the `OFFLINE` state. The script
 looks through the logs, with an AWK script, and if it finds the `PHOTO` state, it shows a special symbol, etc.
 
-#### **2nd March update (big refactoring):**<br>
+### **2nd March update (big refactoring):**<br>
 Timelapse now has a `lib` folder, where all the cool stuff is happening. The main script is now clean and easy to read,
 hopefully. Heartbeat looks for a different keyword to show when a picture is taken, more reliable. 
 Tests will follow. I promise.
+
+### **3rd March update (plotting data gathered so far):**<br>
+![](media/march_25_image_data_plot_gptl.png)
+  
