@@ -1,8 +1,7 @@
 {
-  "wifi": {
+  "router": {
     "ssid": "ssid_here",
     "pwd": "c2VjdXJlX3dpZmlfcHdkX2hlcmU="
-  "router": {
   },
   "gopro": {
     "mac": "mac_here",
@@ -31,5 +30,5 @@
     "awk_script": "/home/timelapse/heartbeat.awk",
     "state_file": "/home/timelapse/heartbeat.state"
   },
-  "logging_path": "/Users/mrbigheart/workspace/personal/code/gopro_downloads/logs"
+  "logging_path": "/home/timelapse/logs"
 }
