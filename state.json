@@ -1,10 +1,11 @@
 {
-  "photo_number": 0,
-  "last_photo_minute": "2021-07-25T20:00:00",
-  "last_offline_alert_time": "2021-07-25T20:00:00",
+  "sending_alert_every_20_minutes": false,
+  "last_offline_alert_time": "2001-04-01T20:00:00",
+  "max_error_retries": 5,
+  "error_retries_counter": 0,
   "photo_capture_error_counter": 0,
   "reach_for_help_counter": 0,
-  "error_retries": 0,
-  "max_error_retries": 5,
-  "sending_alert_every_20_minutes": false
+  "last_photo_minute": "2001-04-01T20:00:00",
+  "execution_start_time": "2001-04-01T20:00:00",
+  "rpi_uptime": -1
 }

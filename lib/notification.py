@@ -39,9 +39,9 @@ class Notification:
         except Exception as e:
             logger.error(f"Error sending status: {e}")
 
-    def send_notification(self, title, message):
+    def send_alert(self, title, message):
         logger.error(f"[ALERT] {title}: {message}")
-        url = "https://api.pushbullet.com/v2/pushes"
+        url = "https://api.PushBullet.com/v2/pushes"
         headers = {
             "Access-Token": self.push_config["api_key"],
             "Content-Type": "application/json"
@@ -55,8 +55,10 @@ class Notification:
         try:
             resp = requests.post(url, headers=headers, json=data)
             if resp.status_code == 200:
-                logger.info("Push notification sent..")
+                logger.info(f"Push notification sent successfully --> [ALERT] {title} -- {message} -- {timestamp}")
             else:
-                logger.error(f"Pushbullet error: {resp.status_code} -> {resp.text}")
+                logger.error(f"PushBullet error: {resp.status_code} -> {resp.text}")
         except Exception as e:
-            logger.error(f"Error sending pushbullet: {e}")
+            logger.error(f"Error sending PushBullet: {e}")
+
+notification = Notification()

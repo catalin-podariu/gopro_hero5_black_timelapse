@@ -3,6 +3,8 @@
 # Orchestrates the timelapse process using separate modules from lib/.
 
 import time
+import datetime
+
 import lib.config as config
 import lib.state as state
 
@@ -13,7 +15,8 @@ class Timelapse:
 
     def __init__(self):
         self.config = config.global_config
-        self.state_instance = state.state_instance
+        self.state = config.global_config.state
+        self.state_handler = state.handler
 
     def main_loop(self):
         self.config.load_saved_config()
@@ -25,30 +28,31 @@ class Timelapse:
         handling errors (ERROR) or sending alerts (OFFLINE_ALERT).
         """
         self.config.restart_counter += 1
+        self.config.execution_start_time = datetime.datetime.now()
         while True:
             try:
-                logger.info(f"Starting main cycle. Current state = {self.state_instance.current_state}")
-                if self.state_instance.current_state == "WAITING":
-                    self.state_instance.handle_waiting_state()
-                elif self.state_instance.current_state == "TAKE_PHOTO":
-                    self.state_instance.handle_take_photo_state()
-                elif self.state_instance.current_state == "SEND_UPDATE":
-                    self.state_instance.handle_send_update_state()
-                elif self.state_instance.current_state == "ERROR":
-                    self.state_instance.handle_error_state()
+                logger.info(f"Starting main cycle. Current state = {self.state}")
+                if self.state == "WAITING":
+                    self.state_handler.handle_waiting()
+                elif self.state == "TAKE_PHOTO":
+                    self.state_handler.handle_taking_photo()
+                elif self.state == "SEND_UPDATE":
+                    self.state_handler.handle_sending_update()
+                elif self.state == "ERROR":
+                    self.state_handler.handle_errors()
 
                 # EMERGENCY STATE: If GoPro is offline, we send alert
-                elif self.state_instance.current_state == "OFFLINE_ALERT":
-                    self.state_instance.handle_offline_alert_state()
+                elif self.state == "OFFLINE_ALERT":
+                    self.state_handler.handle_being_offline()
                 else:
-                    logger.error(f"Unknown state: {self.state_instance.current_state}. Forcing ERROR.")
-                    self.state_instance.current_state = "ERROR"
+                    logger.error(f"Unknown state: {self.state}. Forcing ERROR.")
+                    self.state = "ERROR"
 
                 # Wait a few seconds before next loop
                 time.sleep(10)
             except Exception as e:
                 logger.error(f"Unexpected error in main cycle: {e}")
-                self.state_instance.current_state = "ERROR"
+                self.state = "ERROR"
                 time.sleep(10)
 
 if __name__ == "__main__":

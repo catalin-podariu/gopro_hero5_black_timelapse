@@ -2,9 +2,9 @@
 import datetime
 import lib.config as config
 import lib.wifi as wifi
+import lib.notification
 
 from lib.logger import logger
-from lib.notification import Notification
 from lib.utilities import sync_time
 from lib.gopro import GoPro
 
@@ -15,9 +15,9 @@ class State:
         self.current_state = config.global_config.state
         self.wifi = wifi.wifi
         self.gopro = GoPro()
-        self.notification = Notification()
+        self.notification = lib.notification.Notification()
 
-    def handle_waiting_state(self):
+    def handle_waiting(self):
         now = datetime.datetime.now()
         minute = now.minute
         second = now.second
@@ -34,7 +34,7 @@ class State:
         else:
             self.wifi.keep_alive(False)
 
-    def handle_take_photo_state(self):
+    def handle_taking_photo(self):
         now = datetime.datetime.now()
         minute = now.minute
         second = now.second
@@ -58,7 +58,7 @@ class State:
         else:
             self.current_state = "WAITING"
 
-    def handle_send_update_state(self):
+    def handle_sending_update(self):
         """
         Switch to router Wi-Fi, time sync, send status, save state,
         then switch back to GoPro Wi-Fi to keep it alive. Return to WAITING when done.
@@ -72,7 +72,7 @@ class State:
 
         sync_time()
         self.notification.send_status()
-        self.current_state.save_current_configs()
+        self.config.save_current_configs()
 
         gopro_ssid = self.config.gopro_config["ssid"]
         if not self.wifi.ensure_wifi_connected(gopro_ssid):
@@ -83,7 +83,7 @@ class State:
         logger.info("Update complete. Returning to WAITING.")
         self.current_state = "WAITING"
 
-    def handle_error_state(self):
+    def handle_errors(self):
         """
           If that fails too many times, we reboot the r-pi.
         """
@@ -104,7 +104,7 @@ class State:
             self.current_state = "WAITING"
             self.config.error_retries_counter = 0
 
-    def handle_offline_alert_state(self):
+    def handle_being_offline(self):
         """
         Repeatedly tries to connect to router Wi-Fi,
         then attempts GoPro Wi-Fi. If both fail, remains offline.
@@ -150,7 +150,7 @@ class State:
 
             # Otherwise, router is up but GoPro is offline
             if time_since_last_offline.total_seconds() >= 1200:  # 20-minute repeat
-                self.notification.send_notification(
+                self.notification.send_alert(
                     title="GoPro OFFLINE!",
                     message="STILL cannot connect to GoPro. [20 min repeat]. Sent at ..."
                 )
@@ -158,11 +158,11 @@ class State:
             else:
                 # If we haven't started the repeating cycle, send that immediate “first offline” alert
                 if not self.config.sending_alert_every_20_min:
-                    self.notification.send_notification(
+                    self.notification.send_alert(
                         title="GoPro OFFLINE!",
                         message="I cannot connect to GoPro. Sending first-time alert at ..."
                     )
                     self.config.sending_alert_every_20_min = True
                     self.config.last_offline_alert_time = now
 
-state_instance = State()
+handler = State()
