@@ -15,7 +15,6 @@ class Timelapse:
 
     def __init__(self):
         self.config = config.global_config
-        self.state = config.global_config.state
         self.state_handler = state.handler
 
     def main_loop(self):
@@ -31,28 +30,28 @@ class Timelapse:
         self.config.execution_start_time = datetime.datetime.now()
         while True:
             try:
-                logger.info(f"Starting main cycle. Current state = {self.state}")
-                if self.state == "WAITING":
+                logger.info(f"Starting main cycle. Current state = {self.config.state}")
+                if self.config.state == "WAITING":
                     self.state_handler.handle_waiting()
-                elif self.state == "TAKE_PHOTO":
+                elif self.config.state == "TAKE_PHOTO":
                     self.state_handler.handle_taking_photo()
-                elif self.state == "SEND_UPDATE":
+                elif self.config.state == "SEND_UPDATE":
                     self.state_handler.handle_sending_update()
-                elif self.state == "ERROR":
+                elif self.config.state == "ERROR":
                     self.state_handler.handle_errors()
 
                 # EMERGENCY STATE: If GoPro is offline, we send alert
-                elif self.state == "OFFLINE_ALERT":
+                elif self.config.state == "OFFLINE_ALERT":
                     self.state_handler.handle_being_offline()
                 else:
-                    logger.error(f"Unknown state: {self.state}. Forcing ERROR.")
-                    self.state = "ERROR"
+                    logger.error(f"Unknown state: {self.config.state}. Forcing ERROR.")
+                    self.config.state = "ERROR"
 
                 # Wait a few seconds before next loop
                 time.sleep(10)
             except Exception as e:
                 logger.error(f"Unexpected error in main cycle: {e}")
-                self.state = "ERROR"
+                self.config.state = "ERROR"
                 time.sleep(10)
 
 if __name__ == "__main__":

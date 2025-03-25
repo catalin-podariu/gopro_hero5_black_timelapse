@@ -14,7 +14,6 @@ class Wifi:
 
     def __init__(self):
         self.config = config.global_config
-        self.current_state = config.global_config.state
 
     def check_network_reachable(self, ip, retries=5, delay=4):
         for attempt in range(retries):
@@ -38,8 +37,8 @@ class Wifi:
 
         logger.info(f"Connecting to Wi-Fi: {ssid}")
         if not self.switch_wifi(ssid):
-            self.current_state = "OFFLINE_ALERT"
-            logger.error(f"Could not connect to {ssid} ->  We are in [{self.current_state}].")
+            config.global_config.state = "OFFLINE_ALERT"
+            logger.error(f"Could not connect to {ssid} ->  We are in [{config.global_config.state}].")
             return False
         return True
 

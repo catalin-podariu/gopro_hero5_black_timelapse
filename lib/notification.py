@@ -46,16 +46,15 @@ class Notification:
             "Access-Token": self.push_config["api_key"],
             "Content-Type": "application/json"
         }
-        timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         data = {
             "type": "note",
             "title": f"[ALERT] {title}",
-            "body": f"{message} -- [{timestamp}]"
+            "body": f"{message}"
         }
         try:
             resp = requests.post(url, headers=headers, json=data)
             if resp.status_code == 200:
-                logger.info(f"Push notification sent successfully --> [ALERT] {title} -- {message} -- {timestamp}")
+                logger.info(f"Push notification sent successfully --> [ALERT] {title} -- {message}")
             else:
                 logger.error(f"PushBullet error: {resp.status_code} -> {resp.text}")
         except Exception as e:

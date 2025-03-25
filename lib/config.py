@@ -29,13 +29,13 @@ class Config:
         self.max_error_retries = 4
         self.error_retries_counter = 0
         self.photo_capture_error_counter = 0
-        self.last_offline_alert_time = 0
-        self.last_photo_minute = 0
-        self.execution_start_time = 0
-        self.rpi_uptime = -1
+        self.last_offline_alert_time = None
+        self.last_photo_minute = None
+        self.execution_start_time = None
+        self.rpi_uptime = None
 
     def load_saved_config(self):
-        logger.info(f"Loading state. This only happens after a REBOOT. Current state is [{global_config.state}]")
+        logger.info(f"Loading state. This only happens after a REBOOT. Current state is [{self.state}]")
         result = subprocess.run(["sudo", "uptime"], capture_output=True, text=True)
         logger.info(f"Uptime: {result.stdout.strip()}")
 
