@@ -52,7 +52,7 @@ BEGIN {
     # Check for events, in no particular order yet
     if (index(lineUpper, "OFFLINE")  > 0) foundOffline = 1
     if (index(lineUpper, "RESTART")  > 0) foundRestart = 1
-    if (index(lineUpper, "PHOTO")    > 0) foundPhoto   = 1
+    if (index(lineUpper, "PHOTO NOW")    > 0) foundPhoto   = 1
     if (index(lineUpper, "WOL")      > 0) foundWol     = 1
 }
 

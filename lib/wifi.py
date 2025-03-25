@@ -4,21 +4,17 @@ import base64
 import subprocess
 import time
 import socket
+import lib.config as config
 
 from goprocam import GoProCamera, constants
 from lib.logger import logger
-from lib.config import Config
-from lib.state import State
 
 
 class Wifi:
 
     def __init__(self):
-        self.config = Config()
-        self.state = State()
-
-        self.gopro_config = self.config.gopro_config
-        self.router_config = self.config.router_config
+        self.config = config.global_config
+        self.current_state = config.global_config.state
 
     def check_network_reachable(self, ip, retries=5, delay=4):
         for attempt in range(retries):
@@ -42,8 +38,8 @@ class Wifi:
 
         logger.info(f"Connecting to Wi-Fi: {ssid}")
         if not self.switch_wifi(ssid):
-            self.state = "OFFLINE_ALERT"
-            logger.error(f"Could not connect to {ssid} ->  We are in [{self.state}].")
+            self.current_state = "OFFLINE_ALERT"
+            logger.error(f"Could not connect to {ssid} ->  We are in [{self.current_state}].")
             return False
         return True
 
@@ -73,7 +69,7 @@ class Wifi:
         time.sleep(5)
         subprocess.run(["sudo", "ifup", "wlan0"])
         time.sleep(10)
-        if self.ensure_wifi_connected(self.gopro_config["ssid"]):
+        if self.ensure_wifi_connected(self.config.gopro_config["ssid"]):
             logger.info("Wi-Fi reconnected successfully.")
         else:
             logger.error("Wi-Fi restart failed. Manual intervention required.")
@@ -81,22 +77,22 @@ class Wifi:
     def keep_alive(self, send_wol):
         logger.info("Attempting to keep GoPro Wi-Fi alive..")
 
-        gopro_ssid = self.gopro_config["ssid"]
+        gopro_ssid = self.config.gopro_config["ssid"]
         if not self.ensure_wifi_connected(gopro_ssid):
             logger.warning("Cannot keep alive because we can't connect to GoPro Wi-Fi.")
             return  # We’re probably in OFFLINE_ALERT or ERROR now
 
         if send_wol:
-            self.send_wol(self.gopro_config["mac"])
+            self.send_wol(self.config.gopro_config["mac"])
             time.sleep(3)  # short sleep to let the packet settle
-            self.send_wol(self.gopro_config["mac"])
+            self.send_wol(self.config.gopro_config["mac"])
 
-            if not self.check_network_reachable(self.gopro_config["ip"]):
+            if not self.check_network_reachable(self.config.gopro_config["ip"]):
                 logger.error("GoPro not reachable even after sending WOL. Possibly off already. But why?!")
                 return
 
             try:
-                gopro = GoProCamera.GoPro(self.gopro_config["ip"])
+                gopro = GoProCamera.GoPro(self.config.gopro_config["ip"])
                 logger.info(f"Connected to GoPro. {gopro}")
                 gopro.power_on()
                 time.sleep(2)
@@ -132,10 +128,10 @@ class Wifi:
             logger.error(f"Error sending WOL packet: {e}")
 
     def choose_wifi_password(self, ssid):
-        if ssid == self.gopro_config["ssid"]:
-            return base64.b64decode(self.gopro_config["pwd"]).decode("utf-8")
-        elif ssid == self.router_config["ssid"]:
-            return base64.b64decode(self.router_config["pwd"]).decode("utf-8")
+        if ssid == self.config.gopro_config["ssid"]:
+            return base64.b64decode(self.config.gopro_config["pwd"]).decode("utf-8")
+        elif ssid == self.config.router_config["ssid"]:
+            return base64.b64decode(self.config.router_config["pwd"]).decode("utf-8")
 
     def get_current_wifi(self):
         try:
@@ -149,3 +145,5 @@ class Wifi:
         except Exception as ex:
             logger.error(f"Failed to get current wifi: x", ex)
             return None
+
+wifi = Wifi()

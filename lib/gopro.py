@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 
 import time
+import lib.wifi as wifi
+import lib.config as config
+from lib.logger import logger
 
 from goprocam import GoProCamera, constants
-from lib.logger import logger
-from lib.wifi import Wifi
-from lib.config import Config
-from util.download_pictures import gopro_config
 
 
 class GoPro:
 
     def __init__(self):
-        self.wifi = Wifi()
-        self.config = Config()
-        self.gopro_config = self.config.gopro_config
-        self.photo_capture_error_counter = 0
+        self.wifi = wifi.wifi
+        self.config = config.global_config
 
+        self.gopro_config = self.config.gopro_config
+        self.photo_capture_error_counter = config.global_config.photo_capture_error_counter
 
     def take_photo(self):
         try:

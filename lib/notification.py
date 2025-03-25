@@ -4,18 +4,17 @@
 
 import requests
 import datetime
+import lib.config as config
 
 from lib.logger import logger
-from lib.config import Config
-from lib.util import rpi_temp
+from lib.utilities import rpi_temp
 
 
 class Notification:
 
     def __init__(self):
-        self.config = Config()
+        self.config = config.global_config
         self.push_config = self.config.push_config
-        self.restart_counter = 0
 
     def send_status(self):
         url = "https://api.pushbullet.com/v2/pushes"
@@ -29,7 +28,7 @@ class Notification:
             "title": "Time-lapse update",
             "body": f"Don't worry.. all iz good! \n{timestamp} "
                     f"- Temp is [{rpi_temp()}] "
-                    f"- Restart counter: [{self.restart_counter}]"
+                    f"- Restart counter: [{self.config.restart_counter}]"
         }
         try:
             resp = requests.post(url, headers=headers, json=data)
