@@ -88,10 +88,10 @@ This would be nice if you also add video capabilities and you want it to take a 
 <br>
 But, if you *do have* an use-case where you have to mess with the config remotely, then you can move some of those values in 
 the `keep_alive` array, to the `photo_timer` array. Keep track of these and make sure the downtime is not too long! Some 
-testing needs to be done, but it should work without any other changes. The thing is.. the GoPro will go to sleep after a 
-few minutes of inactivity. Even if you leave it turned on. I kept saying this.. you need to keep the wifi alive. 
-If you tick the box in the Quick App, that says it'll never go to sleep.. it won't, but the wifi will. And you can't wake 
-it up remotely. So.. just keep the wifi alive. 
+testing needs to be done, but it should work without any other changes. The thing is.. the GoPro wifi will go to sleep after a 
+few minutes of inactivity. Around 4 or 5. Even if you leave it turned on. I kept saying this.. _you need to keep the wifi alive_. 
+If you tick the box in the Quick App, that says it'll never go to sleep.. the GoPro won't, but the wifi will. And you can't wake 
+it up remotely. So.. just keep the wifi alive! 
 Right. I'll stop now.
 
 ### Specs
